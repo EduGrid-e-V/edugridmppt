@@ -1,0 +1,145 @@
+<!DOCTYPE HTML><html>
+<head>
+  <title>EduGrid MPPT Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: Arial; text-align: center; margin:0; padding:0; background-color: #f4f4f4; }
+    .container { max-width: 800px; margin: auto; padding: 20px; }
+    .card { background: white; box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+    .metric { padding: 10px; background: #e9ecef; border-radius: 5px; }
+    .value { font-size: 1.5rem; font-weight: bold; color: #333; }
+    .label { color: #666; font-size: 0.9rem; }
+    button { padding: 10px 20px; font-size: 16px; margin: 5px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 5px; transition: 0.3s; }
+    button:hover { background: #0056b3; }
+    button.active { background: #004494; border: 2px solid #002a5c; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>EduGrid MPPT Dashboard</h2>
+    
+    <div class="card">
+      <div class="grid">
+        <div class="metric"><div class="value"><span id="vin">--</span> V</div><div class="label">Voltage</div></div>
+        <div class="metric"><div class="value"><span id="iin">--</span> A</div><div class="label">Current</div></div>
+        <div class="metric"><div class="value"><span id="pin">--</span> W</div><div class="label">Power</div></div>
+        <div class="metric"><div class="value"><span id="duty">--</span> %</div><div class="label">Duty Cycle</div></div>
+      </div>
+      <div style="margin-top: 10px;">
+        Mode: <span id="mode" style="font-weight:bold">--</span> | Algo: <span id="algo" style="font-weight:bold">--</span>
+      </div>
+    </div>
+    
+    <div class="card">
+      <h3>Controls</h3>
+      <button onclick="setMode('AUTO')">Auto Mode</button>
+      <button onclick="setMode('MANUAL')">Manual Mode</button>
+      <hr>
+      <button onclick="setAlgo('INCCOND')">IncCond</button>
+      <button onclick="setAlgo('PNO')">P&O</button>
+      <hr>
+      <button onclick="startSweep()">Start IV Sweep</button>
+    </div>
+
+    <div class="card">
+      <canvas id="ivChart"></canvas>
+    </div>
+  </div>
+
+<script>
+let chart;
+
+function initChart() {
+    const ctx = document.getElementById('ivChart').getContext('2d');
+    chart = new Chart(ctx, {
+        type: 'scatter',
+        data: {
+            datasets: [{
+                label: 'IV Curve',
+                data: [],
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                showLine: true
+            }, {
+                label: 'Power Curve',
+                data: [],
+                borderColor: 'rgb(255, 99, 132)',
+                backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                yAxisID: 'y1',
+                showLine: true
+            }, {
+                label: 'MPPT History',
+                data: [],
+                borderColor: 'rgb(255, 205, 86)',
+                backgroundColor: 'rgba(255, 205, 86, 1)',
+                pointRadius: 5,
+                showLine: false
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: { title: { display: true, text: 'Voltage (V)' } },
+                y: { title: { display: true, text: 'Current (A)' } },
+                y1: { position: 'right', title: { display: true, text: 'Power (W)' } }
+            }
+        }
+    });
+}
+
+function updateData() {
+    fetch('/api/data').then(r => r.json()).then(d => {
+        document.getElementById('vin').innerText = d.vin.toFixed(2);
+        document.getElementById('iin').innerText = d.iin.toFixed(2);
+        document.getElementById('pin').innerText = d.pin.toFixed(2);
+        document.getElementById('duty').innerText = d.duty.toFixed(1);
+        document.getElementById('mode').innerText = d.mode;
+        document.getElementById('algo').innerText = d.algo;
+    });
+}
+
+function initWebSocket() {
+    const ws = new WebSocket('ws://' + window.location.hostname + '/ws');
+    ws.onmessage = function(event) {
+        const d = JSON.parse(event.data);
+        
+        // Update History Graph
+        const point = {x: d.v, y: d.i};
+        const history = chart.data.datasets[2].data;
+        history.push(point);
+        if (history.length > 15) history.shift(); // Keep last 15 points
+        chart.update('none'); // Update without animation for performance
+    };
+}
+
+function setMode(m) { fetch('/api/set?mode=' + m); }
+function setAlgo(a) { fetch('/api/set?algo=' + a); }
+
+function startSweep() {
+    fetch('/api/sweep').then(() => {
+        alert('Sweep Started! Please wait ~3 seconds...');
+        setTimeout(fetchSweepData, 3500);
+    });
+}
+
+function fetchSweepData() {
+    fetch('/api/sweepdata').then(r => r.json()).then(d => {
+        const ivData = d.v.map((v, i) => ({x: v, y: d.i[i]}));
+        const pvData = d.v.map((v, i) => ({x: v, y: d.p[i]}));
+        
+        chart.data.datasets[0].data = ivData;
+        chart.data.datasets[1].data = pvData;
+        chart.update();
+    });
+}
+
+window.onload = function() {
+    initChart();
+    initWebSocket();
+    setInterval(updateData, 1000);
+};
+</script>
+</body>
+</html>
