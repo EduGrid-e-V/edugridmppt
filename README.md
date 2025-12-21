@@ -1,7 +1,6 @@
 # EduGrid MPPT ☀️🔋
 
-![EduGrid MPPT Board](docs/board_image.jpg)
-*(Place your board image in a `docs` folder and name it `board_image.jpg`)*
+![EduGrid MPPT Board](docs/arduino_mppt.png)
 
 **EduGrid MPPT** is an open-source, educational Maximum Power Point Tracking (MPPT) platform designed to help students and hobbyists understand solar energy conversion. From simple PWM control to advanced adaptive algorithms, this board allows you to tinker, experiment, and visualize the physics of photovoltaics.
 
