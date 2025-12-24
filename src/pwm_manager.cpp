@@ -6,11 +6,8 @@
 #include "pwm_manager.h"
 #include "config.h"
 
-/** @brief Current duty cycle state (0.0 to 1.0). */
-static float _duty = PWM_MIN_DUTY;
-
-/** @brief Timestamp of the last duty cycle change. */
-static unsigned long _last_pwm_change = 0;
+static float _duty = PWM_MIN_DUTY;            /** @brief Current duty cycle state (0.0 to 1.0). */
+static unsigned long _last_pwm_change = 0;    /** @brief Timestamp of the last duty cycle change. */
 
 void setupPWM() {
 #ifdef ESP32

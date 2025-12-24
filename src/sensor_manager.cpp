@@ -7,11 +7,8 @@
 #include "config.h"
 #include <INA226.h>
 
-/** @brief INA226 sensor instance. */
-static INA226 ina226(INA_ADDR);
-
-/** @brief Flag indicating if the sensor is successfully initialized. */
-static bool ina_ok = false;
+static INA226 ina226(INA_ADDR); /** @brief INA226 sensor instance. */
+static bool ina_ok = false;     /** @brief Flag indicating if the sensor is successfully initialized. */
 
 bool setupSensor() {
   ina_ok = ina226.begin();

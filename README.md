@@ -6,8 +6,11 @@
 
 ## 🚀 Features
 
-*   **Dual Architecture Support**: Runs on **Arduino Nano** (AVR) for simplicity or **ESP32** for advanced IoT features.
-*   **Real-Time Web Dashboard** (ESP32):
+*   **Multi-Architecture Support**: 
+    *   **Arduino Nano** (AVR) for simplicity.
+    *   **Arduino Nano ESP32** (ESP32-S3) for a drop-in replacement with WiFi.
+    *   **ESP32 DevKit** for advanced IoT features.
+*   **Real-Time Web Dashboard** (ESP32 variants):
     *   Monitor Voltage, Current, Power, and Duty Cycle via WiFi.
     *   **Live IV Curve Tracing**: Visualize the characteristics of your solar panel.
     *   **MPPT History**: Watch the algorithm "climb the hill" in real-time on the graph.
@@ -20,7 +23,7 @@
 
 ## 🛠️ Hardware Specifications
 
-*   **Microcontroller**: Socket for Arduino Nano (ATmega328P) or ESP32 DevKit V1.
+*   **Microcontroller**: Socket for Arduino Nano (ATmega328P) or Arduino Nano ESP32.
 *   **Power Stage**: Synchronous Buck Converter (Software controlled).
 *   **Sensing**: INA226 High-Side Current & Voltage Sensor (I2C).
 *   **Display**: 1.3" SH1106 OLED (I2C).
@@ -45,17 +48,18 @@ This project is built with **PlatformIO**.
     ```
 
 2.  **Select your Environment**:
-    *   **ESP32**: Advanced features (WiFi, Web Dashboard).
-    *   **Nano**: Basic standalone operation.
+    *   **arduino_nano_esp32**: For the Nano ESP32 (S3).
+    *   **esp32dev**: For generic ESP32 DevKit.
+    *   **nanoatmega328new**: For classic Arduino Nano.
 
 3.  **Build & Upload**:
     *   Open the PlatformIO sidebar.
-    *   Select `env:esp32dev` or `env:nanoatmega328new`.
+    *   Select your environment.
     *   Click **Upload**.
 
 4.  **Upload Filesystem (ESP32 Only)**:
     *   To enable the web dashboard, you must upload the HTML files.
-    *   PlatformIO Sidebar -> `esp32dev` -> Platform -> **Upload Filesystem Image**.
+    *   PlatformIO Sidebar -> `env:arduino_nano_esp32` (or `esp32dev`) -> Platform -> **Upload Filesystem Image**.
 
 ## 🌐 Web Dashboard (ESP32)
 

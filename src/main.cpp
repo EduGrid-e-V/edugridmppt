@@ -23,33 +23,19 @@
 #endif
 
 // ================= STATE VARIABLES =================
-
-/** @brief Current operating mode (AUTO or MANUAL). */
-Mode mode = MODE_AUTO;
-
-/** @brief Previous operating mode (used to detect changes). */
-Mode lastMode = MODE_AUTO;
-
-/** @brief Current MPPT Algorithm. */
-Algorithm currentAlgorithm = (Algorithm)DEFAULT_MPPT_ALGORITHM;
+Mode mode = MODE_AUTO;                                          /** @brief Current operating mode (AUTO or MANUAL). */
+Mode lastMode = MODE_AUTO;                                      /** @brief Previous operating mode (used to detect changes). */
+Algorithm currentAlgorithm = (Algorithm)DEFAULT_MPPT_ALGORITHM; /** @brief Current MPPT Algorithm. */
 
 // ================= FILTERED MEASUREMENTS =================
-
-/** @brief Low-pass filtered Input Voltage (V). */
-float fVin = 0;
-
-/** @brief Low-pass filtered Input Current (A). */
-float fIin = 0;
-
-/** @brief Low-pass filtered Input Power (W). */
-float fPin = 0;
+float fVin = 0; /** @brief Low-pass filtered Input Voltage (V). */
+float fIin = 0; /** @brief Low-pass filtered Input Current (A). */
+float fPin = 0; /** @brief Low-pass filtered Input Power (W). */
 
 // ================= TIMING VARIABLES =================
 
 unsigned long t_last      = 0;  /** @brief Timestamp of the last MPPT/Control loop execution. */
-
 unsigned long t_start     = 0;  /** @brief Timestamp of system start (used for soft-start). */
-
 unsigned long t_disp_last = 0;  /** @brief Timestamp of the last display update. */
  
 // ================= SETUP =================
@@ -179,8 +165,10 @@ void loop() {
             // Broadcast data point via WebSocket
             broadcastMpptData(fVin, fIin, fPin);
         }
-#endif
         if (!isSweeping() && mode == MODE_AUTO) {
+#else
+        if (mode == MODE_AUTO) {
+#endif
           if (fVin < VIN_VALID_MIN) {
             // Input voltage too low for MPPT
             setDuty(PWM_MIN_DUTY);

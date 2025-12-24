@@ -7,32 +7,16 @@
 #include "config.h"
 
 // ================= BUTTON STATE =================
-
-/** @brief Last stable state of the button (HIGH or LOW). */
-static bool          btn_last_level = HIGH; // with PULLUP: HIGH=idle, LOW=pressed
-
-/** @brief Timestamp of the last state change for debouncing. */
-static unsigned long btn_last_change = 0;
-
-/** @brief Timestamp when the button was pressed down. */
-static unsigned long btn_press_start = 0;
-
-/** @brief Flag to indicate if the long press event has already been triggered. */
-static bool          btn_long_press_handled = false;
-
-/** @brief Duration in milliseconds to trigger a long press. */
-const unsigned long  LONG_PRESS_MS = 2000;
+static bool          btn_last_level = HIGH; /** @brief Last stable state of the button (HIGH or LOW). */ // with PULLUP: HIGH=idle, LOW=pressed
+static unsigned long btn_last_change = 0;   /** @brief Timestamp of the last state change for debouncing. */
+static unsigned long btn_press_start = 0;   /** @brief Timestamp when the button was pressed down. */
+static bool          btn_long_press_handled = false; /** @brief Flag to indicate if the long press event has already been triggered. */
+const unsigned long  LONG_PRESS_MS = 2000;  /** @brief Duration in milliseconds to trigger a long press. */
 
 // ================= POTENTIOMETER STATE =================
-
-/** @brief Minimum raw ADC value seen (for auto-calibration). */
-static int   pot_min_seen = 1023;
-
-/** @brief Maximum raw ADC value seen (for auto-calibration). */
-static int   pot_max_seen = 0;
-
-/** @brief Smoothed ADC value (0.0 to 1023.0). */
-static float pot_smoothed = 0.0f;
+static int   pot_min_seen = 1023; /** @brief Minimum raw ADC value seen (for auto-calibration). */
+static int   pot_max_seen = 0;    /** @brief Maximum raw ADC value seen (for auto-calibration). */
+static float pot_smoothed = 0.0f; /** @brief Smoothed ADC value (0.0 to 1023.0). */
 
 void setupInputs() {
     pinMode(BTN_PIN, INPUT_PULLUP);

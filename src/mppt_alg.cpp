@@ -9,19 +9,9 @@
 #include <math.h>
 
 // ================= SHARED STATE =================
-
-/** @brief Previous Input Voltage (V) for differential calculation. */
-static float prevVin = 0.0f;
-
-/** 
- * @brief Previous Metric for differential calculation.
- * Stores Input Current (Iin) for Incremental Conductance.
- * Stores Input Power (Pin) for Perturb & Observe.
- */
-static float prevMetric = 0.0f; 
-
-/** @brief Flag indicating if the previous state is valid. */
-static bool  have_prev = false;
+static float prevVin = 0.0f;    /** @brief Previous Input Voltage (V) for differential calculation. */
+static float prevMetric = 0.0f; /** @brief Previous Metric (Iin for IncCond, Pin for P&O). */
+static bool  have_prev = false; /** @brief Flag indicating if the previous state is valid. */
 
 void resetMPPT() {
     have_prev = false;

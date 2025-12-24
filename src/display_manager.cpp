@@ -9,8 +9,7 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SH110X.h>
 
-/** @brief Instance of the SH1106 display driver. */
-static Adafruit_SH1106G display(OLED_W, OLED_H, &Wire, -1);
+static Adafruit_SH1106G display(OLED_W, OLED_H, &Wire, -1); /** @brief Instance of the SH1106 display driver. */
 
 void setupDisplay() {
   // Initialize the display with I2C address 0x3C
