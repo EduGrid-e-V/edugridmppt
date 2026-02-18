@@ -8171,7 +8171,7 @@
 				)
 			)
 		)
-		(property "Value" "2.2m"
+		(property "Value" "2.2m ( 690mA)"
 			(at 148.59 64.77 90)
 			(effects
 				(font
