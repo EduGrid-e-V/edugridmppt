@@ -1,5 +1,29 @@
+# --- Firmware ---
 .pio
 .vscode
 .DS_Store
 *.log
+
+# --- KiCad Phase/Temporary Files ---
+*.fp-info.cache
+*.bak
+*.kicad_pcb-bak
+*.kicad_sch-bak
+*.sch-bak
+*~
+_autosave-*
+*.tmp
+
+# --- Netlists and Logs ---
+*.net
+*.erc
+*.erc-errors
+*.erc-warnings
+*.rpt
+*.xml
+
+# --- Project Backups ---
+# KiCad 9 creates a dedicated directory for backups
+*-backups/
+backups/
 
