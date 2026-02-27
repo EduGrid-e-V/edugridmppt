@@ -1,0 +1,141 @@
+(footprint "L_TDK_SLF12575"
+	(version 20241229)
+	(generator "pcbnew")
+	(generator_version "9.0")
+	(layer "F.Cu")
+	(descr "Inductor, TDK SLF12575 series, 12.5x12.5x7.5mm")
+	(tags "inductor smd slf12575")
+	(property "Reference" "L**"
+		(at 0 -7.5 0)
+		(layer "F.SilkS")
+		(uuid "f8be7150-9fda-461e-8d64-37430e0df7fe")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Value" "L_TDK_SLF12575"
+		(at 0 7.5 0)
+		(layer "F.Fab")
+		(uuid "952e2c2e-d7e1-40f6-afe4-fd4ae356870f")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" "https://www.lcsc.com/datasheet/C970556.pdf"
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "85fd6adb-3a09-4615-b101-67233d87de69")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" ""
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "f77db7e9-2c27-4601-91f3-4160a8602344")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(attr smd)
+	(fp_line
+		(start -6.4 -6.4)
+		(end -6.4 -3.3)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "d0f56783-a681-4041-b9e6-f4cbd15a9597")
+	)
+	(fp_line
+		(start -6.4 -6.4)
+		(end 6.4 -6.4)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "007a285f-9fbb-43aa-ae26-ce39878f7532")
+	)
+	(fp_line
+		(start -6.4 6.4)
+		(end -6.4 3.3)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "bc6a8af6-acfc-4077-bf9c-a7f2b3d85281")
+	)
+	(fp_line
+		(start -6.4 6.4)
+		(end 6.4 6.4)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "32a60670-a493-43d6-881f-341907d8b2eb")
+	)
+	(fp_line
+		(start 6.4 -6.4)
+		(end 6.4 -3.3)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "f7a8c3a1-e35f-4dff-9d17-a0f9a9dff501")
+	)
+	(fp_line
+		(start 6.4 6.4)
+		(end 6.4 3.3)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "4d49dd6c-8d30-45ea-980f-be940dbb5c62")
+	)
+	(fp_rect
+		(start -7.7 -6.75)
+		(end 7.7 6.75)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.CrtYd")
+		(uuid "f1dfcc2f-a143-4358-9af7-cf29d3e22a52")
+	)
+	(pad "1" smd rect
+		(at -5.85 0)
+		(size 3.2 6)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "00df3659-a710-445c-a426-19702b059585")
+	)
+	(pad "2" smd rect
+		(at 5.85 0)
+		(size 3.2 6)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(uuid "c0be7483-f56e-4c1e-9298-0691c20dc27b")
+	)
+	(embedded_fonts no)
+)
