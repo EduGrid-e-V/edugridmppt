@@ -5,11 +5,13 @@
 *.log
 
 # --- KiCad Phase/Temporary Files ---
-*.fp-info.cache
-*.bak
-*.kicad_pcb-bak
-*.kicad_sch-bak
-*.sch-bak
+*fp-info-cache
+fabrication-toolkit-options.json
+*bak
+*kicad_pcb-bak
+*kicad_sch-bak
+*kicad_prl
+*sch-bak
 *~
 _autosave-*
 *.tmp
@@ -22,9 +24,13 @@ _autosave-*
 *.erc-warnings
 *.rpt
 *.xml
+*.ipc
+*.csv
 
 # --- Project Backups ---
 # KiCad 9 creates a dedicated directory for backups
 *-backups/
-backups/
+**/backups/
+**/production/
+**.zip
 
