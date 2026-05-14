@@ -5,6 +5,7 @@
 
 #include "input_manager.h"
 #include "config.h"
+#include <math.h>
 
 // ================= BUTTON STATE =================
 static bool          btn_last_level = HIGH; /** @brief Last stable state of the button (HIGH or LOW). */ // with PULLUP: HIGH=idle, LOW=pressed
@@ -14,17 +15,34 @@ static bool          btn_long_press_handled = false; /** @brief Flag to indicate
 const unsigned long  LONG_PRESS_MS = 2000;  /** @brief Duration in milliseconds to trigger a long press. */
 
 // ================= POTENTIOMETER STATE =================
-static int   pot_min_seen = 1023; /** @brief Minimum raw ADC value seen (for auto-calibration). */
+#if POT_AUTOCAL
+static int   pot_min_seen = POT_ADC_MAX; /** @brief Minimum raw ADC value seen (for auto-calibration). */
 static int   pot_max_seen = 0;    /** @brief Maximum raw ADC value seen (for auto-calibration). */
-static float pot_smoothed = 0.0f; /** @brief Smoothed ADC value (0.0 to 1023.0). */
+#endif
+static float pot_smoothed = 0.0f; /** @brief Smoothed ADC value. */
+static float lastRememberedPotentiometerDutyCycle = PWM_MIN_DUTY;
+static bool  potentiometerBaselineIsReady = false;
+#if POT_DEBUG_SERIAL
+static unsigned long lastPotDebugPrintMs = 0;
+#endif
+
+static float readPotentiometerAverage();
+static float mapPotentiometerToDuty(float rawAdcValue);
+static void printPotentiometerDebug(float rawAdcValue, float smoothedAdcValue, float dutyCycle);
 
 void setupInputs() {
     pinMode(BTN_PIN, INPUT_PULLUP);
+    pinMode(POT_PIN, INPUT);
 #ifdef ESP32
     analogReadResolution(10); // Set ADC to 10-bit to match AVR logic
+    analogSetPinAttenuation(POT_PIN, ADC_11db);
 #endif
-    // Seed the smoothing filter with the initial reading
-    pot_smoothed = analogRead(POT_PIN); 
+
+    // Seed the smoothing filter from an average so startup does not get stuck
+    // near one noisy sample.
+    pot_smoothed = readPotentiometerAverage();
+    Serial.print(F("Pot raw startup: "));
+    Serial.println((int)(pot_smoothed + 0.5f));
 }
 
 ButtonEvent checkButtonEvent(unsigned long now) {
@@ -62,29 +80,70 @@ ButtonEvent checkButtonEvent(unsigned long now) {
 
 float readManualDuty() {
   // 1. Oversampling: Take multiple readings and average them
+  float raw_avg = readPotentiometerAverage();
+ 
+  // 2. IIR Smoothing: Low-pass filter
+  // y[n] = (1-alpha)*y[n-1] + alpha*x[n]
+  float smoothingAlpha =
+      (fabsf(raw_avg - pot_smoothed) >= POT_FAST_DELTA_RAW)
+          ? POT_FAST_IIR_ALPHA
+          : POT_IIR_ALPHA;
+  pot_smoothed = (1.0f - smoothingAlpha) * pot_smoothed + smoothingAlpha * raw_avg;
+ 
+  float dutyCycle = mapPotentiometerToDuty(pot_smoothed);
+  printPotentiometerDebug(raw_avg, pot_smoothed, dutyCycle);
+
+  return dutyCycle;
+}
+
+int readPotentiometerRaw() {
+  return (int)(readPotentiometerAverage() + 0.5f);
+}
+
+void rememberCurrentPotentiometerPositionAsBaseline() {
+  lastRememberedPotentiometerDutyCycle = readManualDuty();
+  potentiometerBaselineIsReady = true;
+}
+
+bool readManualDutyIfPotentiometerMoved(float &manualDutyCycle) {
+  manualDutyCycle = readManualDuty();
+
+  if (!potentiometerBaselineIsReady) {
+    lastRememberedPotentiometerDutyCycle = manualDutyCycle;
+    potentiometerBaselineIsReady = true;
+    return false;
+  }
+
+  bool potentiometerMovedEnough =
+      fabsf(manualDutyCycle - lastRememberedPotentiometerDutyCycle) >= POT_TAKEOVER_THRESHOLD;
+
+  if (potentiometerMovedEnough) {
+    lastRememberedPotentiometerDutyCycle = manualDutyCycle;
+  }
+
+  return potentiometerMovedEnough;
+}
+
+static float readPotentiometerAverage() {
   long sum = 0;
   for (int i = 0; i < POT_OVERSAMPLES; i++) {
     sum += analogRead(POT_PIN);
   }
-  float raw_avg = (float)sum / (float)POT_OVERSAMPLES;  // 0..1023
- 
-  // 2. IIR Smoothing: Low-pass filter
-  // y[n] = (1-alpha)*y[n-1] + alpha*x[n]
-  pot_smoothed = (1.0f - POT_IIR_ALPHA) * pot_smoothed + POT_IIR_ALPHA * raw_avg;
- 
-  // 3. Auto-calibration (Optional)
-  // Dynamically adjust min/max range based on observed values
-  int smi = (int)(pot_smoothed + 0.5f);
+
+  return (float)sum / (float)POT_OVERSAMPLES;
+}
+
+static float mapPotentiometerToDuty(float rawAdcValue) {
+  int smi = (int)(rawAdcValue + 0.5f);
 #if POT_AUTOCAL
   if (smi < pot_min_seen) pot_min_seen = smi;
   if (smi > pot_max_seen) pot_max_seen = smi;
   
-  // Prevent divide by zero & give some initial sane window
-  // Ensure hi > lo
-  int lo = (pot_min_seen <= pot_max_seen - 10) ? pot_min_seen : 0;
-  int hi = (pot_max_seen >= pot_min_seen + 10) ? pot_max_seen : 1023;
+  int lo = (pot_min_seen <= pot_max_seen - 10) ? pot_min_seen : POT_ADC_MIN;
+  int hi = (pot_max_seen >= pot_min_seen + 10) ? pot_max_seen : POT_ADC_MAX;
 #else
-  int lo = 0, hi = 1023;
+  int lo = POT_ADC_MIN;
+  int hi = POT_ADC_MAX;
 #endif
  
   // 4. Normalization
@@ -97,7 +156,7 @@ float readManualDuty() {
   float duty_f = PWM_MIN_DUTY + norm * (PWM_MAX_DUTY - PWM_MIN_DUTY);
  
   // 6. Round to whole percent
-  // This prevents the duty cycle from jittering between e.g. 50.1% and 49.9%
+  // This prevents the duty cycle from flickering between e.g. 50.1% and 49.9%
   int duty_pct = (int)lroundf(duty_f * 100.0f);     // integer %
   
   // Clamp final result
@@ -106,4 +165,24 @@ float readManualDuty() {
                        (int)(PWM_MAX_DUTY*100.0f + 0.5f));
                        
   return duty_pct / 100.0f; // Convert back to 0..1 float
+}
+
+static void printPotentiometerDebug(float rawAdcValue, float smoothedAdcValue, float dutyCycle) {
+#if POT_DEBUG_SERIAL
+  unsigned long now = millis();
+  if (now - lastPotDebugPrintMs < 500) return;
+  lastPotDebugPrintMs = now;
+
+  Serial.print(F("POT raw="));
+  Serial.print(rawAdcValue, 1);
+  Serial.print(F(" smooth="));
+  Serial.print(smoothedAdcValue, 1);
+  Serial.print(F(" duty="));
+  Serial.print(dutyCycle * 100.0f, 0);
+  Serial.println(F("%"));
+#else
+  (void)rawAdcValue;
+  (void)smoothedAdcValue;
+  (void)dutyCycle;
+#endif
 }

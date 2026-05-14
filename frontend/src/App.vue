@@ -1,0 +1,294 @@
+<template>
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="brand-lockup" aria-label="EduGrid MPPT Dashboard">
+        <svg class="brand-mark" viewBox="0 0 80 80" aria-hidden="true">
+          <circle cx="40" cy="36" r="27" />
+          <path d="M40 8v14M13 36H3M77 36H67M21 16l-8-8M59 16l8-8M20 56l-8 8M60 56l8 8" />
+          <path d="M40 36v28M40 36l-23 13M40 36l23 13" />
+          <path d="M25 55h30l6 17H19l6-17Z" />
+          <path d="M29 55l-3 17M40 55v17M51 55l3 17M22 64h36" />
+          <circle cx="40" cy="36" r="3" />
+        </svg>
+        <div>
+          <div class="brand-title">EduGrid</div>
+          <div class="brand-subtitle">MPPT Lab Dashboard</div>
+        </div>
+      </div>
+
+      <div class="topbar-actions">
+        <div class="source-switch" role="group" aria-label="Data source">
+          <button
+            :class="{ active: experimentSource === 'real' }"
+            @click="setExperimentSource('real')"
+          >
+            Real
+          </button>
+          <button
+            :class="{ active: experimentSource === 'simulation' }"
+            @click="setExperimentSource('simulation')"
+          >
+            Sim
+          </button>
+        </div>
+        <div class="connection-pill" :class="{ online: isConnected }">
+          <span class="status-dot"></span>
+          {{ connectionLabel }}
+        </div>
+      </div>
+    </header>
+
+    <section class="intro-band" aria-label="Experiment overview">
+      <div>
+        <p class="eyebrow">Solar power electronics trainer</p>
+        <h1>Find the maximum power point, then see why it moves.</h1>
+      </div>
+      <div class="learning-points" aria-label="Learning goals">
+        <span>Measure V, I, P</span>
+        <span>Compare algorithms</span>
+        <span>Trace the V-I curve</span>
+      </div>
+    </section>
+
+    <section class="dashboard-grid" aria-label="MPPT controls and graphs">
+      <ControlPanel
+        class="controls-panel"
+        :mode="mode"
+        :algorithm="algorithm"
+        :duty="duty"
+        :power="power"
+        :voltage="voltage"
+        :current="current"
+        :loadPower="loadPower"
+        :loadVoltage="loadVoltage"
+        :loadCurrent="loadCurrent"
+        :loadSensor="loadSensor"
+        @update:mode="setMode"
+        @update:algorithm="setAlgorithm"
+        @update:duty="setDuty"
+        @trigger:sweep="doSweep"
+      />
+
+      <VICurve
+        :key="`vi-${experimentSource}`"
+        class="vi-panel"
+        :voltage="voltage"
+        :current="current"
+        :sweepData="sweepCurveData"
+      />
+
+      <RealtimeChart
+        class="power-panel"
+        title="Power Over Time"
+        color="#d14b3f"
+        :data="powerChartData"
+      />
+    </section>
+  </main>
+</template>
+
+<script setup>
+import { computed, ref, onMounted, onUnmounted } from 'vue';
+import ControlPanel from './components/ControlPanel.vue';
+import VICurve from './components/VICurve.vue';
+import RealtimeChart from './components/RealtimeChart.vue';
+import { createSensorConnection } from './services';
+
+const isConnected = ref(false);
+
+const voltage = ref(0);
+const current = ref(0);
+const power = ref(0);
+const loadVoltage = ref(0);
+const loadCurrent = ref(0);
+const loadPower = ref(0);
+const loadSensor = ref(false);
+const duty = ref(0);
+const mode = ref('MANUAL');
+const algorithm = ref('PNO');
+const experimentSource = ref(import.meta.env.DEV ? 'simulation' : 'real');
+
+const sweepCurveData = ref([]);
+const powerChartData = ref([[], []]);
+const MAX_CHART_POINTS = 600;
+const MANUAL_DUTY_ECHO_GRACE_MS = 1500;
+let chartStartTime = null;
+let sweepFallbackTimer = null;
+let lastManualDutySetAt = 0;
+
+let connector = null;
+
+const connectionLabel = computed(() => {
+  if (experimentSource.value === 'simulation') return 'Simulation';
+  return isConnected.value ? 'Connected' : 'Real experiment offline';
+});
+
+const resetDashboardData = () => {
+  voltage.value = 0;
+  current.value = 0;
+  power.value = 0;
+  loadVoltage.value = 0;
+  loadCurrent.value = 0;
+  loadPower.value = 0;
+  loadSensor.value = false;
+  sweepCurveData.value = [];
+  powerChartData.value = [[], []];
+  chartStartTime = null;
+};
+
+const handleData = (data) => {
+  if (!data) return;
+
+  if (data.event === 'sweep_done') {
+    loadSweepData();
+    return;
+  }
+
+  voltage.value = data.v || 0;
+  current.value = data.c || 0;
+  power.value = data.p || 0;
+  loadVoltage.value = data.loadV || 0;
+  loadCurrent.value = data.loadI || 0;
+  loadPower.value = data.loadP || 0;
+  loadSensor.value = Boolean(data.loadSensor);
+
+  if (data.m) {
+    mode.value = data.m;
+  }
+
+  if (data.algo) {
+    algorithm.value = data.algo;
+  }
+
+  if (data.d !== null && data.d !== undefined) {
+    const incomingDuty = Math.max(0, Math.min(0.95, Number(data.d)));
+    const justSetManualDuty = mode.value === 'MANUAL'
+      && Date.now() - lastManualDutySetAt < MANUAL_DUTY_ECHO_GRACE_MS;
+
+    if (!justSetManualDuty || Math.abs(incomingDuty - duty.value) < 0.02) {
+      duty.value = incomingDuty;
+    }
+  }
+
+  updateCharts(data.p || 0);
+};
+
+const updateCharts = (p) => {
+  const now = Date.now() / 1000;
+
+  if (chartStartTime === null) {
+    chartStartTime = now;
+  }
+
+  const relativeTime = now - chartStartTime;
+  const times = powerChartData.value[0];
+  const values = powerChartData.value[1];
+
+  times.push(relativeTime);
+  values.push(p);
+
+  if (times.length > MAX_CHART_POINTS) {
+    times.shift();
+    values.shift();
+  }
+
+  powerChartData.value = [times, values];
+};
+
+const sendCommand = (command, payload) => {
+  if (!connector) return;
+  connector.sendCommand(command, payload);
+};
+
+const setMode = (newMode) => {
+  mode.value = newMode;
+  sendCommand('set', { mode: newMode });
+};
+
+const setAlgorithm = (newAlgo) => {
+  algorithm.value = newAlgo;
+  sendCommand('set', { algo: newAlgo });
+};
+
+const setDuty = (newDuty) => {
+  duty.value = newDuty;
+  lastManualDutySetAt = Date.now();
+  sendCommand('set', { duty: newDuty });
+};
+
+const doSweep = async () => {
+  if (!connector) return;
+
+  sweepCurveData.value = [];
+  await connector.sendCommand('sweep');
+  scheduleSweepFallback();
+};
+
+const loadSweepData = async () => {
+  if (!connector) return;
+
+  clearSweepFallback();
+
+  try {
+    const json = await connector.getSweepData();
+    if (json && json.points) {
+      sweepCurveData.value = json.points;
+    }
+  } catch (e) {
+    console.error('Sweep fetch failed', e);
+  }
+};
+
+const scheduleSweepFallback = () => {
+  clearSweepFallback();
+  sweepFallbackTimer = setTimeout(loadSweepData, 5000);
+};
+
+const clearSweepFallback = () => {
+  if (sweepFallbackTimer) {
+    clearTimeout(sweepFallbackTimer);
+    sweepFallbackTimer = null;
+  }
+};
+
+const connectToSelectedSource = () => {
+  if (connector) {
+    connector.disconnect();
+    connector = null;
+  }
+
+  clearSweepFallback();
+  resetDashboardData();
+  isConnected.value = experimentSource.value === 'simulation';
+
+  connector = createSensorConnection((data) => {
+    isConnected.value = true;
+    handleData(data);
+  }, experimentSource.value);
+
+  connector.connect();
+
+  if (connector.socket) {
+    connector.socket.addEventListener('close', () => {
+      if (experimentSource.value === 'real') {
+        isConnected.value = false;
+      }
+    });
+  }
+};
+
+const setExperimentSource = (source) => {
+  if (source === experimentSource.value) return;
+  experimentSource.value = source;
+  connectToSelectedSource();
+};
+
+onMounted(() => {
+  connectToSelectedSource();
+});
+
+onUnmounted(() => {
+  clearSweepFallback();
+  if (connector) connector.disconnect();
+});
+</script>

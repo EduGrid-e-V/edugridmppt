@@ -7,9 +7,15 @@
 #include <ArduinoJson.h>
 #include <vector>
 
-// Externs from main.cpp
+// Measurements from main.cpp
 extern Mode mode;
-extern float fVin, fIin, fPin;
+extern float PanelVoltage;
+extern float PanelCurrent;
+extern float PanelPower;
+extern float LoadVoltage;
+extern float LoadCurrent;
+extern float LoadPower;
+extern bool LoadSensorAvailable;
 
 static bool _sweeping = false;
 static float _sweepDuty = 0.05f;
@@ -20,6 +26,10 @@ struct SweepPoint {
     float v;
     float i;
     float p;
+    float loadV;
+    float loadI;
+    float loadP;
+    bool loadSensor;
 };
 
 static std::vector<SweepPoint> _sweepData;
@@ -35,15 +45,19 @@ void startSweep() {
     _lastSweepStep = millis();
 }
 
-void updateSweep() {
-    if (!_sweeping) return;
+bool updateSweep() {
+    if (!_sweeping) return false;
     
     if (millis() - _lastSweepStep > 50) { // 50ms per step
         // Record data
         SweepPoint p;
-        p.v = fVin;
-        p.i = fIin;
-        p.p = fPin;
+        p.v = PanelVoltage;
+        p.i = PanelCurrent;
+        p.p = PanelPower;
+        p.loadV = LoadVoltage;
+        p.loadI = LoadCurrent;
+        p.loadP = LoadPower;
+        p.loadSensor = LoadSensorAvailable;
         _sweepData.push_back(p);
         
         // Increment duty
@@ -53,11 +67,15 @@ void updateSweep() {
             _sweeping = false;
             mode = _preSweepMode; // Restore mode
             // Optionally set duty back to something safe
+            _lastSweepStep = millis();
+            return true;
         } else {
             setDuty(_sweepDuty);
         }
         _lastSweepStep = millis();
     }
+
+    return false;
 }
 
 bool isSweeping() {
@@ -69,11 +87,18 @@ String getSweepData() {
     JsonArray voltage = doc["v"].to<JsonArray>();
     JsonArray current = doc["i"].to<JsonArray>();
     JsonArray power = doc["p"].to<JsonArray>();
+    JsonArray loadVoltage = doc["loadV"].to<JsonArray>();
+    JsonArray loadCurrent = doc["loadI"].to<JsonArray>();
+    JsonArray loadPower = doc["loadP"].to<JsonArray>();
+    doc["loadSensor"] = LoadSensorAvailable;
     
     for (const auto& p : _sweepData) {
         voltage.add(p.v);
         current.add(p.i);
         power.add(p.p);
+        loadVoltage.add(p.loadV);
+        loadCurrent.add(p.loadI);
+        loadPower.add(p.loadP);
     }
     
     String output;
@@ -82,4 +107,3 @@ String getSweepData() {
 }
 
 #endif
-

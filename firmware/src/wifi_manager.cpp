@@ -1,7 +1,8 @@
 #ifdef ESP32
 #include "wifi_manager.h"
 #include "config.h"
-#include "pwm_manager.h"
+#include "input_manager.h"
+#include "mppt_alg.h"
 #include "sweep_manager.h"
 #include <Arduino.h>
 #include <AsyncTCP.h>
@@ -9,18 +10,77 @@
 #include <ArduinoJson.h>
 #include <LittleFS.h>
 
-// Externs from main.cpp
-extern float fVin, fIin, fPin;
+// Measurements from main.cpp
+extern float PanelVoltage;
+extern float PanelCurrent;
+extern float PanelPower;
+extern float LoadVoltage;
+extern float LoadCurrent;
+extern float LoadPower;
+extern bool LoadSensorAvailable;
 extern Mode mode;
 extern Algorithm currentAlgorithm;
 
 AsyncWebServer server(WEB_PORT);
 AsyncWebSocket ws("/ws");
 
+static bool webManualDutyActive = false;
+static float webManualDuty = PWM_MIN_DUTY;
+
 void broadcastMpptData(float v, float i, float p) {
     if (ws.count() == 0) return;
-    String json = "{\"v\":" + String(v, 2) + ",\"i\":" + String(i, 2) + ",\"p\":" + String(p, 2) + "}";
+    String json = "{";
+    json += "\"v\":" + String(v, 2) + ",";
+    json += "\"i\":" + String(i, 4) + ",";
+    json += "\"p\":" + String(p, 2) + ",";
+    json += "\"loadV\":" + String(LoadVoltage, 2) + ",";
+    json += "\"loadI\":" + String(LoadCurrent, 4) + ",";
+    json += "\"loadP\":" + String(LoadPower, 2) + ",";
+    json += "\"loadSensor\":" + String(LoadSensorAvailable ? "true" : "false") + ",";
+    json += "\"d\":" + String(getConverterDutyCycle(), 3) + ",";
+    json += "\"pot\":" + String(readPotentiometerRaw()) + ",";
+    json += "\"m\":\"" + String(mode == MODE_AUTO ? "AUTO" : "MANUAL") + "\",";
+    json += "\"algo\":\"" + String(currentAlgorithm == ALGORITHM_INCCOND ? "INCCOND" : "PNO") + "\"";
+    json += "}";
     ws.textAll(json);
+}
+
+void broadcastSweepDone() {
+    if (ws.count() == 0) return;
+    ws.textAll("{\"event\":\"sweep_done\"}");
+}
+
+void setWebMode(Mode requestedMode) {
+    mode = requestedMode;
+    if (requestedMode == MODE_MANUAL) {
+        webManualDutyActive = false;
+    } else {
+        webManualDutyActive = false;
+    }
+}
+
+void setWebAlgorithm(Algorithm requestedAlgorithm) {
+    currentAlgorithm = requestedAlgorithm;
+}
+
+void setWebDuty(float duty) {
+    webManualDutyActive = true;
+    webManualDuty = constrain(duty, PWM_MIN_DUTY, PWM_MAX_DUTY);
+    mode = MODE_MANUAL;
+    rememberCurrentPotentiometerPositionAsBaseline();
+    setConverterDutyCycle(webManualDuty);
+}
+
+void clearWebManualDuty() {
+    webManualDutyActive = false;
+}
+
+bool isWebManualDutyActive() {
+    return webManualDutyActive;
+}
+
+float getWebManualDuty() {
+    return webManualDuty;
 }
 
 void setupWiFi() {
@@ -42,10 +102,15 @@ void setupWiFi() {
 
   server.on("/api/data", HTTP_GET, [](AsyncWebServerRequest *request){
     String json = "{";
-    json += "\"vin\":" + String(fVin, 2) + ",";
-    json += "\"iin\":" + String(fIin, 2) + ",";
-    json += "\"pin\":" + String(fPin, 2) + ",";
-    json += "\"duty\":" + String(getDuty() * 100, 1) + ",";
+    json += "\"vin\":" + String(PanelVoltage, 2) + ",";
+    json += "\"iin\":" + String(PanelCurrent, 4) + ",";
+    json += "\"pin\":" + String(PanelPower, 2) + ",";
+    json += "\"loadV\":" + String(LoadVoltage, 2) + ",";
+    json += "\"loadI\":" + String(LoadCurrent, 4) + ",";
+    json += "\"loadP\":" + String(LoadPower, 2) + ",";
+    json += "\"loadSensor\":" + String(LoadSensorAvailable ? "true" : "false") + ",";
+    json += "\"duty\":" + String(getConverterDutyCycle() * 100, 1) + ",";
+    json += "\"pot\":" + String(readPotentiometerRaw()) + ",";
     json += "\"mode\":\"" + String(mode == MODE_AUTO ? "AUTO" : "MANUAL") + "\",";
     json += "\"algo\":\"" + String(currentAlgorithm == ALGORITHM_INCCOND ? "INCCOND" : "PNO") + "\"";
     json += "}";
@@ -55,13 +120,16 @@ void setupWiFi() {
   server.on("/api/set", HTTP_GET, [](AsyncWebServerRequest *request){
     if (request->hasParam("mode")) {
         String m = request->getParam("mode")->value();
-        if (m == "AUTO") mode = MODE_AUTO;
-        else if (m == "MANUAL") mode = MODE_MANUAL;
+        if (m == "AUTO") setWebMode(MODE_AUTO);
+        else if (m == "MANUAL") setWebMode(MODE_MANUAL);
     }
     if (request->hasParam("algo")) {
         String a = request->getParam("algo")->value();
-        if (a == "INCCOND") currentAlgorithm = ALGORITHM_INCCOND;
-        else if (a == "PNO") currentAlgorithm = ALGORITHM_PNO;
+        if (a == "INCCOND") setWebAlgorithm(ALGORITHM_INCCOND);
+        else if (a == "PNO") setWebAlgorithm(ALGORITHM_PNO);
+    }
+    if (request->hasParam("duty")) {
+        setWebDuty(request->getParam("duty")->value().toFloat());
     }
     request->send(200, "text/plain", "OK");
   });

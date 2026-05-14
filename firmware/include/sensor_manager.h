@@ -1,28 +1,44 @@
 /**
  * @file sensor_manager.h
- * @brief Sensor interface for the INA226.
+ * @brief Simple interface for the INA226 voltage/current sensors.
  *
- * This module handles the initialization and reading of the INA226
- * voltage and current sensor.
+ * The board can have two INA226 sensors:
+ * - panel/input side: measures the solar panel
+ * - load/output side: measures the converter output/load
  */
 
 #pragma once
 #include <Arduino.h>
 
+struct PowerStageMeasurements {
+    float panelVoltageVolts;
+    float panelCurrentAmps;
+    float panelPowerWatts;
+
+    float loadVoltageVolts;
+    float loadCurrentAmps;
+    float loadPowerWatts;
+
+    bool panelSensorIsReady;
+    bool loadSensorIsReady;
+};
+
 /**
- * @brief Initializes the INA226 sensor.
- * 
- * Configures the sensor with the shunt resistor value and maximum expected current.
- * 
- * @return true if the sensor was found and initialized successfully, false otherwise.
+ * @brief Initializes both INA226 sensors.
+ *
+ * @return true when the panel/input INA226 is ready. The load/output INA226 is optional.
  */
 bool setupSensor();
 
 /**
- * @brief Reads the latest voltage and current values from the sensor.
- * 
- * @param[out] vin Reference to a float where the Bus Voltage (V) will be stored.
- * @param[out] ishunt Reference to a float where the Shunt Current (A) will be stored.
- * @return true if the read was successful (and sensor is initialized), false otherwise.
+ * @brief Reads both INA226 sensors.
+ *
+ * The panel/input sensor is required for MPPT. The load/output sensor is optional;
+ * its values are set to zero when it is not detected.
  */
-bool readSensor(float &vin, float &ishunt);
+bool readSensors(PowerStageMeasurements& measurements);
+
+/**
+ * @brief Backward-compatible helper for older experiments.
+ */
+bool readSensor(float &panelVoltageVolts, float &panelCurrentAmps);

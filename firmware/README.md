@@ -1,94 +1,158 @@
-# EduGrid MPPT ☀️🔋
+# EduGrid MPPT Firmware
 
-![EduGrid MPPT Board](docs/arduino_mppt.png)
+Firmware for the EduGrid MPPT trainer. It runs on the classic Arduino Nano and the Arduino Nano ESP32. The Nano ESP32 build also serves the WiFi dashboard from `firmware/data/`.
 
-**EduGrid MPPT** is an open-source, educational Maximum Power Point Tracking (MPPT) platform designed to help students and hobbyists understand solar energy conversion. From simple PWM control to advanced adaptive algorithms, this board allows you to tinker, experiment, and visualize the physics of photovoltaics.
+## Features
 
-## 🚀 Features
+- Arduino Nano and Arduino Nano ESP32 support
+- Student MPPT workspace in `src/mppt_alg.cpp`
+- Short student API: `PV.getVoltage()`, `PV.getPower()`, `load.getVoltage()`, `duty.set()`, `duty.change()`
+- Panel/input INA226 plus optional load/output INA226
+- OLED telemetry with SSD1306 default and SH1106 option
+- Manual duty control with button and potentiometer
+- Nano ESP32 WiFi dashboard with live telemetry, manual duty, algorithm selection, and IV sweep
 
-*   **Multi-Architecture Support**: 
-    *   **Arduino Nano** (AVR) for simplicity.
-    *   **Arduino Nano ESP32** (ESP32-S3) for a drop-in replacement with WiFi.
-    *   **ESP32 DevKit** for advanced IoT features.
-*   **Real-Time Web Dashboard** (ESP32 variants):
-    *   Monitor Voltage, Current, Power, and Duty Cycle via WiFi.
-    *   **Live IV Curve Tracing**: Visualize the characteristics of your solar panel.
-    *   **MPPT History**: Watch the algorithm "climb the hill" in real-time on the graph.
-*   **Multiple Algorithms**:
-    *   Perturb & Observe (P&O)
-    *   Incremental Conductance (IncCond)
-    *   Manual Duty Cycle Control
-*   **Hardware Abstraction**: Modular C++ design makes it easy to swap sensors or displays.
-*   **OLED Display**: On-board SH1106 display for standalone telemetry.
+## Hardware
 
-## 🛠️ Hardware Specifications
+- Microcontroller: Arduino Nano ATmega328P or Arduino Nano ESP32
+- Gate PWM: `D9` on classic Nano, `D5` on Nano ESP32
+- Button: `D3`
+- Potentiometer: `A7`
+- Panel/input INA226: I2C address `0x40`
+- Optional load/output INA226: I2C address `0x41`
+- OLED: I2C address `0x3C`, fallback `0x3D`
 
-*   **Microcontroller**: Socket for Arduino Nano (ATmega328P) or Arduino Nano ESP32.
-*   **Power Stage**: Synchronous Buck Converter (Software controlled).
-*   **Sensing**: INA226 High-Side Current & Voltage Sensor (I2C).
-*   **Display**: 1.3" SH1106 OLED (I2C).
-*   **Inputs**:
-    *   Rotary Potentiometer (Manual Control).
-    *   Push Button (Mode/Algorithm Switching).
+Current OLED default:
 
-## 📦 Getting Started
+```cpp
+#define OLED_CONTROLLER OLED_CONTROLLER_SSD1306
+```
 
-This project is built with **PlatformIO**.
+Switch to SH1106 in `include/config.h` if your display needs it.
 
-### Prerequisites
-*   VS Code with PlatformIO Extension.
-*   EduGrid MPPT Hardware.
+## Important Nano ESP32 Potentiometer Note
 
-### Installation
+The Nano ESP32 analog pins are 3.3 V inputs. Do not feed a 5 V potentiometer wiper directly into an ADC pin.
 
-1.  **Clone the repository**:
-    ```bash
-    git clone https://gitlab.com/your-username/edugrid-mppt.git
-    cd edugrid-mppt
-    ```
+For the next hardware revision:
 
-2.  **Select your Environment**:
-    *   **arduino_nano_esp32**: For the Nano ESP32 (S3).
-    *   **esp32dev**: For generic ESP32 DevKit.
-    *   **nanoatmega328new**: For classic Arduino Nano.
+- Power the potentiometer from `3V3` or `IOREF`, not fixed `5V`.
+- If WiFi must stay on, choose an ADC pin that behaves reliably while WiFi is active.
+- Keep the firmware pin in one place: `POT_PIN` in `include/config.h`.
 
-3.  **Build & Upload**:
-    *   Open the PlatformIO sidebar.
-    *   Select your environment.
-    *   Click **Upload**.
+## Build Environments
 
-4.  **Upload Filesystem (ESP32 Only)**:
-    *   To enable the web dashboard, you must upload the HTML files.
-    *   PlatformIO Sidebar -> `env:arduino_nano_esp32` (or `esp32dev`) -> Platform -> **Upload Filesystem Image**.
+From this `firmware/` folder:
 
-## 🌐 Web Dashboard (ESP32)
+```bash
+pio run -e nanoatmega328new
+pio run -e arduino_nano_esp32
+```
 
-When running on ESP32, the board creates a WiFi Access Point:
+PlatformIO environments:
 
-*   **SSID**: `EduGrid_MPPT`
-*   **Password**: *None (Open Network)*
-*   **IP Address**: `192.168.4.1`
+| Environment | Board |
+| --- | --- |
+| `nanoatmega328new` | Classic Arduino Nano |
+| `arduino_nano_esp32` | Arduino Nano ESP32 |
 
-Navigate to `http://192.168.4.1` on your phone or laptop to:
-*   View real-time power stats.
-*   Switch between **Auto** and **Manual** modes.
-*   Change MPPT algorithms on the fly.
-*   **Start IV Sweep**: Pauses MPPT to scan the panel's voltage range and plot the Power/Voltage curves.
+The old generic `esp32dev` environment has been removed.
 
-## 🕹️ Controls
+## Upload
+
+Use the PlatformIO sidebar or:
+
+```bash
+pio run -e nanoatmega328new -t upload
+pio run -e arduino_nano_esp32 -t upload
+```
+
+For the Nano ESP32 dashboard, also upload the filesystem image:
+
+```bash
+pio run -e arduino_nano_esp32 -t uploadfs
+```
+
+The board creates an open WiFi access point:
+
+```text
+SSID: EduGrid_MPPT
+URL:  http://192.168.4.1
+```
+
+## Controls
 
 | Input | Action |
-| :--- | :--- |
-| **Button (Short Press)** | Toggle **Auto / Manual** Mode |
-| **Button (Long Press)** | Switch Algorithm (**P&O / IncCond**) |
-| **Potentiometer** | Adjust Duty Cycle (in Manual Mode) |
+| --- | --- |
+| Short button press | Toggle Auto / Manual mode |
+| Long button press | Switch Student/P&O and Incremental Conductance |
+| Potentiometer | Set duty cycle in Manual mode |
+| Web dashboard | Set mode, duty, algorithm, and start IV sweep |
 
-## 📚 Educational Goals
+## Student Workspace
 
-1.  **Basics**: Use Manual Mode to understand the relationship between Duty Cycle and Panel Voltage.
-2.  **Algorithms**: Compare P&O vs. IncCond response times under changing light conditions.
-3.  **Characterization**: Use the IV Sweep to see how shading affects the Power Curve.
+Students should usually edit only:
 
-## 📄 License
+```text
+src/mppt_alg.cpp
+```
 
-This project is open-source. Feel free to modify and use it for educational purposes.
+The short API is meant for student code:
+
+```cpp
+PV.getVoltage();
+PV.getCurrent();
+PV.getPower();
+
+load.getVoltage();
+load.getCurrent();
+load.getPower();
+load.isAvailable();
+
+duty.get();
+duty.set(0.50f);
+duty.change(+smallDutyCycleStep);
+```
+
+Longer names such as `measurement.panelVoltageVolts` still work and are useful when teaching structs, but the short API is the preferred beginner path.
+
+Important buck converter rule for this kit:
+
+```text
+Increasing duty cycle usually lowers the panel voltage.
+Decreasing duty cycle usually raises the panel voltage.
+```
+
+## Measurement Filtering
+
+The INA226 is configured for internal averaging. The extra software IIR filter is located in `src/sensor_manager.cpp`, but is disabled by default:
+
+```cpp
+#define ENABLE_SENSOR_IIR_FILTER 0
+```
+
+Enable it in `include/config.h` only if you want additional smoothing after the INA226 readings.
+
+## Configuration
+
+Most project settings live in:
+
+```text
+include/config.h
+```
+
+Useful settings:
+
+| Setting | Meaning |
+| --- | --- |
+| `PWM_MIN_DUTY`, `PWM_MAX_DUTY` | Allowed duty cycle range |
+| `DUTY_STEP_START` | Default MPPT step size |
+| `VIN_VALID_MIN` | Minimum panel voltage before MPPT runs |
+| `INA_AVERAGE_MODE` | INA226 internal averaging |
+| `ENABLE_SENSOR_IIR_FILTER` | Optional software sensor smoothing |
+| `OLED_CONTROLLER` | SSD1306 or SH1106 display driver |
+| `ENABLE_WIFI_DASHBOARD` | Nano ESP32 dashboard on/off |
+
+## Serial Monitor
+
+Use `115200` baud. Startup messages show sensor and OLED status.

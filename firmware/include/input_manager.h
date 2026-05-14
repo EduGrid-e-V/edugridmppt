@@ -44,3 +44,28 @@ ButtonEvent checkButtonEvent(unsigned long now);
  * @return The calculated duty cycle as a float (0.0 to 1.0).
  */
 float readManualDuty();
+
+/**
+ * @brief Reads the raw potentiometer ADC value after oversampling.
+ *
+ * This is mostly useful for diagnostics. With the configured ADC resolution,
+ * the expected range is 0..1023.
+ */
+int readPotentiometerRaw();
+
+/**
+ * @brief Stores the current potentiometer position as the "not moved yet" reference.
+ *
+ * Call this when another input source, such as the web slider, takes control of
+ * the duty cycle. The potentiometer will only take control back after it moves
+ * away from this reference position.
+ */
+void rememberCurrentPotentiometerPositionAsBaseline();
+
+/**
+ * @brief Reads the potentiometer and reports whether it moved enough to take over.
+ *
+ * @param manualDutyCycle Receives the duty cycle from the potentiometer.
+ * @return true when the potentiometer moved by at least POT_TAKEOVER_THRESHOLD.
+ */
+bool readManualDutyIfPotentiometerMoved(float &manualDutyCycle);

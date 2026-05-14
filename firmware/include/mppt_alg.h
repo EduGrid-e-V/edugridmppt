@@ -1,42 +1,112 @@
 /**
  * @file mppt_alg.h
- * @brief Maximum Power Point Tracking Algorithms.
+ * @brief Student-facing Maximum Power Point Tracking interface.
  *
- * This module implements the MPPT logic. It currently supports:
- * - Incremental Conductance
- * - Perturb & Observe
+ * The rest of the firmware hides the hardware details:
+ * - sensors are read in sensor_manager.cpp
+ * - PWM is generated in pwm_manager.cpp
+ * - display output is handled in display_manager.cpp
+ * - WiFi and the dashboard are handled in wifi_manager.cpp
+ *
+ * Students should mainly edit mppt_alg.cpp.
  */
 
 #pragma once
 #include <Arduino.h>
+#include "config.h"
 
 /**
- * @brief Resets the internal state of the MPPT algorithm.
- * 
- * Should be called when switching modes or restarting the MPPT process
- * to ensure a fresh start (e.g., re-triggering the initial kick).
+ * @brief One filtered measurement from the solar panel.
+ */
+struct SolarPanelMeasurement {
+    float panelVoltageVolts;      /**< Voltage at the solar panel input. */
+    float panelCurrentAmps;       /**< Current flowing from the solar panel. */
+    float panelPowerWatts;        /**< panelVoltageVolts * panelCurrentAmps. */
+    float loadVoltageVolts;       /**< Voltage at the converter output/load. */
+    float loadCurrentAmps;        /**< Current flowing into the load. */
+    float loadPowerWatts;         /**< loadVoltageVolts * loadCurrentAmps. */
+    bool loadSensorIsAvailable;   /**< true when the load/output INA226 is present. */
+    float converterDutyCycle;     /**< Current PWM duty cycle, 0.0 to 1.0. */
+};
+
+/**
+ * @brief Simple student-facing view of one measured side of the converter.
+ *
+ * Use PV for the solar-panel side and load for the output side:
+ * PV.getVoltage(), PV.getCurrent(), PV.getPower().
+ */
+class MeasurementPort {
+public:
+    explicit MeasurementPort(bool loadSide);
+
+    float getVoltage() const;
+    float getCurrent() const;
+    float getPower() const;
+    bool isAvailable() const;
+
+private:
+    bool loadSide;
+};
+
+/**
+ * @brief Simple student-facing duty-cycle control.
+ */
+class DutyControl {
+public:
+    float get() const;
+    void set(float requestedDutyCycle) const;
+    void change(float dutyCycleChange) const;
+};
+
+extern MeasurementPort PV;
+extern MeasurementPort load;
+extern DutyControl duty;
+
+/**
+ * @brief Resets memory used by the MPPT algorithm.
+ *
+ * Called when the system enters Auto mode or when the selected algorithm changes.
  */
 void resetMPPT();
 
 /**
- * @brief Executes one iteration of the Incremental Conductance algorithm.
- * 
- * Calculates the slope of the P-V curve (dI/dV) and compares it with the
- * instantaneous conductance (I/V) to determine the direction of the MPP.
- * Adjusts the PWM duty cycle accordingly.
- * 
- * @param fVin Filtered Input Voltage (V).
- * @param fIin Filtered Input Current (A).
+ * @brief Runs the algorithm selected by the UI or long button press.
  */
-void mpptIncrementalConductance(float fVin, float fIin);
+void runSelectedMpptAlgorithm(float panelVoltageVolts,
+                              float panelCurrentAmps,
+                              float loadVoltageVolts,
+                              float loadCurrentAmps,
+                              bool loadSensorIsAvailable,
+                              Algorithm selectedAlgorithm);
 
 /**
- * @brief Executes one iteration of the Perturb & Observe (P&O) algorithm.
- * 
- * Perturbs the operating point (duty cycle) and observes the change in power.
- * If power increases, continues in the same direction. If power decreases, reverses direction.
- * 
- * @param fVin Filtered Input Voltage (V).
- * @param fIin Filtered Input Current (A).
+ * @brief The main student workspace.
+ *
+ * This function is intentionally simple: it receives voltage/current/power
+ * measurements and changes the duty cycle.
  */
-void mpptPerturbObserve(float fVin, float fIin);
+void runStudentMpptAlgorithm(const SolarPanelMeasurement& measurement);
+
+/**
+ * @brief Sets the buck converter duty cycle.
+ *
+ * @param requestedDutyCycle Duty cycle from 0.0 to 1.0. The hardware layer clamps
+ * it to the safe range configured in config.h.
+ */
+void setConverterDutyCycle(float requestedDutyCycle);
+
+/**
+ * @brief Changes the current duty cycle by a small amount.
+ *
+ * Positive values increase duty cycle. Negative values decrease duty cycle.
+ */
+void changeConverterDutyCycle(float dutyCycleChange);
+
+/**
+ * @brief Reads the current duty cycle.
+ */
+float getConverterDutyCycle();
+
+// Compatibility wrappers for older code and experiments.
+void mpptIncrementalConductance(float panelVoltageVolts, float panelCurrentAmps);
+void mpptPerturbObserve(float panelVoltageVolts, float panelCurrentAmps);

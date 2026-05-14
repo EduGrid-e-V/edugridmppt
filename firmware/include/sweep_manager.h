@@ -3,8 +3,7 @@
 
 #ifdef ESP32
 void startSweep();
-void updateSweep();
+bool updateSweep();
 bool isSweeping();
 String getSweepData();
 #endif
-

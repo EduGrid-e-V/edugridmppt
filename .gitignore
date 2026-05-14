@@ -3,6 +3,7 @@
 .vscode
 .DS_Store
 *.log
+.codex
 
 # --- KiCad Phase/Temporary Files ---
 *fp-info-cache
