@@ -26,23 +26,16 @@
     #define GATE_PIN        D5
     #define BTN_PIN         D3
     #define POT_PIN         A7
-    #define ENABLE_WIFI_DASHBOARD 1 /** @brief Enables the Nano ESP32 WiFi dashboard. */
     
     // WiFi Settings
     #define WIFI_SSID       "EduGrid_MPPT"
     #define WEB_PORT        80
 
-#elif defined(ESP32)
-    #error "Unsupported ESP32 board. Use the arduino_nano_esp32 PlatformIO environment."
 #else
     #define GATE_PIN        9 /** @brief Pin number for the Buck converter MOSFET gate (OC1A on Uno/Nano). */
     #define BTN_PIN         3  /** @brief Pin number for the mode toggle button (connected to GND). */
     #define POT_PIN         A7 /** @brief Pin number for the potentiometer (manual duty control). */
 
-#endif
-
-#ifndef ENABLE_WIFI_DASHBOARD
-#define ENABLE_WIFI_DASHBOARD 0
 #endif
 
 // ================= PWM SETTINGS =================
@@ -59,8 +52,9 @@
 #define DUTY_STEP_MAX   0.02f    /** @brief Maximum step size for duty cycle adjustment. */
 #define DUTY_STEP_START 0.01f    /** @brief Default step size for duty cycle adjustment. */
 #define SOFTSTART_MS    1000     /** @brief Duration of the soft-start phase in milliseconds. */
-#define ENABLE_SENSOR_IIR_FILTER 0 /** @brief Optional software IIR filter for INA readings. 0=off, 1=on. */
-#define SENSOR_IIR_ALPHA 0.2f      /** @brief Sensor IIR coefficient when enabled. Higher = less smoothing. */
+#define ALPHA           0.2f     /** @brief Low-pass filter coefficient (0.0 to 1.0). Higher = less smoothing. */
+#define COMPARE_MEASUREMENT_FILTERS 1 /** @brief Print raw-vs-filtered sensor data over Serial when enabled. */
+#define FILTER_COMPARE_PERIOD_MS 1000 /** @brief Interval for raw-vs-filtered Serial comparison. */
 #define VIN_VALID_MIN   0.5f     /** @brief Minimum valid input voltage to start MPPT. */
 #define IIN_VALID_MIN   0.0f     /** @brief Minimum valid input current. */
 #define INA_SETTLE_MS   5        /** @brief Wait time after PWM change before measuring (INA conversion time). */
@@ -76,15 +70,6 @@
 
 /** @brief Number of ADC samples to average for each reading. */
 #define POT_OVERSAMPLES   8
-
-/** @brief Raw ADC value at the minimum potentiometer position. */
-#define POT_ADC_MIN       0
-
-/** @brief Raw ADC value at the maximum potentiometer position on the EduGrid board. */
-#define POT_ADC_MAX       1023
-
-/** @brief Print potentiometer raw/smoothed/duty values while manual control reads the knob. */
-#define POT_DEBUG_SERIAL  0
 
 /** @brief IIR filter coefficient for potentiometer smoothing (0.0 to 1.0). */
 #define POT_IIR_ALPHA     0.65f

@@ -50,6 +50,20 @@
       </div>
     </section>
 
+    <section v-if="experimentSource === 'simulation'" class="advanced-row">
+      <button class="advanced-toggle" @click="toggleAdvancedSimulation">
+        {{ showAdvancedSimulation ? 'Hide advanced simulation' : 'Advanced simulation' }}
+      </button>
+    </section>
+
+    <SimulationScene
+      v-if="experimentSource === 'simulation' && showAdvancedSimulation"
+      :sunPosition="simulationSunPosition"
+      :cloudCover="simulationCloudCover"
+      @update:sunPosition="setSimulationSunPosition"
+      @update:cloudCover="setSimulationCloudCover"
+    />
+
     <section class="dashboard-grid" aria-label="MPPT controls and graphs">
       <ControlPanel
         class="controls-panel"
@@ -74,13 +88,14 @@
         class="vi-panel"
         :voltage="voltage"
         :current="current"
-        :sweepData="sweepCurveData"
+        :sweepData="visibleCurveData"
       />
 
       <RealtimeChart
         class="power-panel"
         title="Power Over Time"
         color="#d14b3f"
+        :max="2"
         :data="powerChartData"
       />
     </section>
@@ -92,6 +107,7 @@ import { computed, ref, onMounted, onUnmounted } from 'vue';
 import ControlPanel from './components/ControlPanel.vue';
 import VICurve from './components/VICurve.vue';
 import RealtimeChart from './components/RealtimeChart.vue';
+import SimulationScene from './components/SimulationScene.vue';
 import { createSensorConnection } from './services';
 
 const isConnected = ref(false);
@@ -107,13 +123,18 @@ const duty = ref(0);
 const mode = ref('MANUAL');
 const algorithm = ref('PNO');
 const experimentSource = ref(import.meta.env.DEV ? 'simulation' : 'real');
+const showAdvancedSimulation = ref(false);
+const simulationSunPosition = ref(0.55);
+const simulationCloudCover = ref(0.12);
 
 const sweepCurveData = ref([]);
+const sweepHasRun = ref(false);
 const powerChartData = ref([[], []]);
 const MAX_CHART_POINTS = 600;
 const MANUAL_DUTY_ECHO_GRACE_MS = 1500;
 let chartStartTime = null;
 let sweepFallbackTimer = null;
+let simulationCurveRefreshTimer = null;
 let lastManualDutySetAt = 0;
 
 let connector = null;
@@ -121,6 +142,14 @@ let connector = null;
 const connectionLabel = computed(() => {
   if (experimentSource.value === 'simulation') return 'Simulation';
   return isConnected.value ? 'Connected' : 'Real experiment offline';
+});
+
+const visibleCurveData = computed(() => {
+  if (experimentSource.value === 'simulation' && showAdvancedSimulation.value) {
+    return sweepCurveData.value;
+  }
+
+  return sweepHasRun.value ? sweepCurveData.value : [];
 });
 
 const resetDashboardData = () => {
@@ -132,6 +161,7 @@ const resetDashboardData = () => {
   loadPower.value = 0;
   loadSensor.value = false;
   sweepCurveData.value = [];
+  sweepHasRun.value = false;
   powerChartData.value = [[], []];
   chartStartTime = null;
 };
@@ -200,6 +230,15 @@ const sendCommand = (command, payload) => {
   connector.sendCommand(command, payload);
 };
 
+const sendSimulationEnvironment = () => {
+  if (experimentSource.value !== 'simulation' || !connector) return;
+
+  connector.sendCommand('simulation', {
+    sunPosition: simulationSunPosition.value,
+    cloudCover: simulationCloudCover.value
+  });
+};
+
 const setMode = (newMode) => {
   mode.value = newMode;
   sendCommand('set', { mode: newMode });
@@ -219,6 +258,7 @@ const setDuty = (newDuty) => {
 const doSweep = async () => {
   if (!connector) return;
 
+  sweepHasRun.value = true;
   sweepCurveData.value = [];
   await connector.sendCommand('sweep');
   scheduleSweepFallback();
@@ -251,6 +291,46 @@ const clearSweepFallback = () => {
   }
 };
 
+const scheduleSimulationCurveRefresh = () => {
+  if (experimentSource.value !== 'simulation') return;
+
+  if (simulationCurveRefreshTimer) {
+    clearTimeout(simulationCurveRefreshTimer);
+  }
+
+  simulationCurveRefreshTimer = setTimeout(() => {
+    simulationCurveRefreshTimer = null;
+    loadSweepData();
+  }, 80);
+};
+
+const clearSimulationCurveRefresh = () => {
+  if (simulationCurveRefreshTimer) {
+    clearTimeout(simulationCurveRefreshTimer);
+    simulationCurveRefreshTimer = null;
+  }
+};
+
+const setSimulationSunPosition = (value) => {
+  simulationSunPosition.value = value;
+  sendSimulationEnvironment();
+  scheduleSimulationCurveRefresh();
+};
+
+const setSimulationCloudCover = (value) => {
+  simulationCloudCover.value = value;
+  sendSimulationEnvironment();
+  scheduleSimulationCurveRefresh();
+};
+
+const toggleAdvancedSimulation = () => {
+  showAdvancedSimulation.value = !showAdvancedSimulation.value;
+
+  if (showAdvancedSimulation.value) {
+    scheduleSimulationCurveRefresh();
+  }
+};
+
 const connectToSelectedSource = () => {
   if (connector) {
     connector.disconnect();
@@ -258,6 +338,7 @@ const connectToSelectedSource = () => {
   }
 
   clearSweepFallback();
+  clearSimulationCurveRefresh();
   resetDashboardData();
   isConnected.value = experimentSource.value === 'simulation';
 
@@ -267,6 +348,8 @@ const connectToSelectedSource = () => {
   }, experimentSource.value);
 
   connector.connect();
+  sendSimulationEnvironment();
+  scheduleSimulationCurveRefresh();
 
   if (connector.socket) {
     connector.socket.addEventListener('close', () => {
@@ -289,6 +372,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   clearSweepFallback();
+  clearSimulationCurveRefresh();
   if (connector) connector.disconnect();
 });
 </script>

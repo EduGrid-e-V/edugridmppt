@@ -333,7 +333,7 @@ h3 {
 
 .line.power {
   border-top-color: #d14b3f;
-  border-top-style: solid;
+  border-top-style: dashed;
 }
 
 .graph-frame {
@@ -405,6 +405,7 @@ h3 {
   stroke-width: 3;
   stroke-linecap: round;
   stroke-linejoin: round;
+  stroke-dasharray: 8 8;
 }
 
 .history-path {

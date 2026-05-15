@@ -46,6 +46,7 @@ button {
 
 .topbar,
 .intro-band,
+.advanced-row,
 .dashboard-grid {
   width: min(1440px, 100%);
   margin: 0 auto;
@@ -210,6 +211,28 @@ button {
   font-weight: 750;
 }
 
+.advanced-row {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 12px;
+}
+
+.advanced-toggle {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid #cfd9d5;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  color: #2e3a46;
+  font-size: 0.88rem;
+  font-weight: 850;
+}
+
+.advanced-toggle:hover {
+  border-color: #2f7f66;
+  color: #2f7f66;
+}
+
 .dashboard-grid {
   display: grid;
   grid-template-columns: minmax(320px, 0.72fr) minmax(0, 1fr) minmax(0, 1fr);
@@ -253,6 +276,7 @@ button {
 
   .topbar,
   .intro-band,
+  .advanced-row,
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
@@ -293,6 +317,14 @@ button {
 
   .learning-points {
     justify-content: flex-start;
+  }
+
+  .advanced-row {
+    justify-content: stretch;
+  }
+
+  .advanced-toggle {
+    width: 100%;
   }
 
   .dashboard-grid {
