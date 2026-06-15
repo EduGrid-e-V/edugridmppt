@@ -67,8 +67,8 @@
 #endif
 
 // ================= PWM SETTINGS =================
-#define PWM_MIN_DUTY    0.10f    /** @brief Minimum allowed PWM duty cycle (0.0 to 1.0). */ // 10 %
-#define PWM_MAX_DUTY    0.90f    /** @brief Maximum allowed PWM duty cycle (0.0 to 1.0). */ // 90 %
+#define PWM_MIN_DUTY    0.0f    /** @brief Minimum allowed PWM duty cycle (0.0 to 1.0). */ // 10 %
+#define PWM_MAX_DUTY    0.98f    /** @brief Maximum allowed PWM duty cycle (0.0 to 1.0). */ // 90 %
 
 // ================= MPPT ALGORITHM SETTINGS =================
 #define ALGO_INCCOND    0 /** @brief Identifier for the Incremental Conductance algorithm. */
