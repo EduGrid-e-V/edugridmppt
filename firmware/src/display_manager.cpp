@@ -63,6 +63,38 @@ void displaySplash() {
   display.display();
 }
 
+void displayWiFiSsid(const char* ssid) {
+  if (!displayIsReady) return;
+
+  const char* shownSsid = (ssid != nullptr && ssid[0] != '\0')
+      ? ssid
+      : WIFI_SSID_PREFIX;
+
+  display.clearDisplay();
+  display.setTextColor(OLED_TEXT_COLOR);
+
+  display.setTextSize(1);
+  display.setCursor(0, 0);
+  display.println(F("WiFi AP"));
+  display.println(F("SSID"));
+
+  display.setTextSize(2);
+  int16_t textX = 0;
+  int16_t textY = 0;
+  uint16_t textWidth = 0;
+  uint16_t textHeight = 0;
+  display.getTextBounds(shownSsid, 0, 0, &textX, &textY, &textWidth, &textHeight);
+
+  int16_t ssidX = (OLED_W - (int16_t)textWidth) / 2;
+  if (ssidX < 0) {
+      ssidX = 0;
+  }
+
+  display.setCursor(ssidX, 30);
+  display.print(shownSsid);
+  display.display();
+}
+
 void displayTelemetry(float panelPowerWatts,
                       float panelVoltageVolts,
                       float panelCurrentAmps,

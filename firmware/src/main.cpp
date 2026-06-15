@@ -39,6 +39,11 @@ unsigned long lastControlLoopMs = 0;
 unsigned long startupMs = 0;
 unsigned long lastDisplayUpdateMs = 0;
 
+#if defined(ESP32) && ENABLE_WIFI_DASHBOARD
+unsigned long wifiSsidDisplayStartMs = 0;
+bool wifiSsidDisplayIsActive = false;
+#endif
+
 static void printStartupMessage();
 static void handleButtonInput(unsigned long now);
 static void handleModeChange();
@@ -46,6 +51,7 @@ static void runSoftStartIfNeeded(unsigned long now);
 static bool readSolarPanelMeasurements();
 static void runAutomaticOrManualControl();
 static void sendMeasurementsToDashboard();
+static bool shouldKeepWiFiSsidOnDisplay(unsigned long now);
 
 void setup() {
     Serial.begin(115200);
@@ -72,6 +78,9 @@ void setup() {
 
 #if defined(ESP32) && ENABLE_WIFI_DASHBOARD
     setupWiFi();
+    displayWiFiSsid(getWiFiSsid());
+    wifiSsidDisplayStartMs = millis();
+    wifiSsidDisplayIsActive = true;
 #endif
 
     startupMs = millis();
@@ -112,6 +121,10 @@ void loop() {
 
     if (timeForDisplay) {
         lastDisplayUpdateMs = now;
+        if (shouldKeepWiFiSsidOnDisplay(now)) {
+            return;
+        }
+
         displayTelemetry(PanelPower,
                          PanelVoltage,
                          PanelCurrent,
@@ -123,6 +136,22 @@ void loop() {
                          mode,
                          currentAlgorithm);
     }
+}
+
+static bool shouldKeepWiFiSsidOnDisplay(unsigned long now) {
+#if defined(ESP32) && ENABLE_WIFI_DASHBOARD
+    if (!wifiSsidDisplayIsActive) {
+        return false;
+    }
+
+    if (now - wifiSsidDisplayStartMs < WIFI_SSID_DISPLAY_MS) {
+        return true;
+    }
+
+    wifiSsidDisplayIsActive = false;
+#endif
+
+    return false;
 }
 
 static void printStartupMessage() {

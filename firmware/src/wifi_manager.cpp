@@ -26,6 +26,24 @@ AsyncWebSocket ws("/ws");
 
 static bool webManualDutyActive = false;
 static float webManualDuty = PWM_MIN_DUTY;
+static char wifiAccessPointSsid[16] = "";
+
+static void buildWiFiSsid() {
+    uint8_t chipIdSuffix = (uint8_t)(ESP.getEfuseMac() & 0xFF);
+    snprintf(wifiAccessPointSsid,
+             sizeof(wifiAccessPointSsid),
+             "%s%02X",
+             WIFI_SSID_PREFIX,
+             chipIdSuffix);
+}
+
+const char* getWiFiSsid() {
+    if (wifiAccessPointSsid[0] == '\0') {
+        buildWiFiSsid();
+    }
+
+    return wifiAccessPointSsid;
+}
 
 void broadcastMpptData(float v, float i, float p) {
     if (ws.count() == 0) return;
@@ -85,7 +103,10 @@ float getWebManualDuty() {
 
 void setupWiFi() {
   // Start Open Access Point (No Password)
-  WiFi.softAP(WIFI_SSID);
+  const char* ssid = getWiFiSsid();
+  WiFi.softAP(ssid);
+  Serial.print("WiFi SSID: ");
+  Serial.println(ssid);
   Serial.print("AP IP Address: ");
   Serial.println(WiFi.softAPIP());
 
