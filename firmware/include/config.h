@@ -30,7 +30,7 @@
     #define ENABLE_WIFI_DASHBOARD 1
 
     // WiFi Settings
-    #define WIFI_SSID_PREFIX "EduGrid"
+    #define WIFI_SSID_PREFIX "EduGrid_"
     #define WEB_PORT         80
     #define CAPTIVE_DNS_PORT 53
 
@@ -43,7 +43,7 @@
     #define ENABLE_WIFI_DASHBOARD 1
     
     // WiFi Settings
-    #define WIFI_SSID_PREFIX "EduGrid"
+    #define WIFI_SSID_PREFIX "EduGrid_"
     #define WEB_PORT         80
     #define CAPTIVE_DNS_PORT 53
 
@@ -59,7 +59,7 @@
 #endif
 
 #ifndef WIFI_SSID_PREFIX
-#define WIFI_SSID_PREFIX "EduGrid"
+#define WIFI_SSID_PREFIX "EduGrid_"
 #endif
 
 #ifndef CAPTIVE_DNS_PORT

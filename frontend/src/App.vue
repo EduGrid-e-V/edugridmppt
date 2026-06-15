@@ -39,14 +39,29 @@
     </header>
 
     <section class="intro-band" aria-label="Experiment overview">
-      <div>
+      <div class="intro-copy-block">
         <p class="eyebrow">Solar power electronics trainer</p>
-        <h1>Find the maximum power point, then see why it moves.</h1>
+        <h1>MPPT lab: observe, sweep, improve.</h1>
+        <p class="intro-copy">
+          Compare panel input and load output while the converter searches for the point where a PV
+          module can deliver the most useful power.
+        </p>
       </div>
-      <div class="learning-points" aria-label="Learning goals">
-        <span>Measure V, I, P</span>
-        <span>Compare algorithms</span>
-        <span>Trace the V-I curve</span>
+      <div class="intro-side">
+        <div class="source-summary">
+          <span>Current workspace</span>
+          <strong>{{ experimentSource === 'simulation' ? 'Simulation model' : 'Real ESP32 board' }}</strong>
+          <p>
+            {{ experimentSource === 'simulation'
+              ? 'Use sunlight and cloud cover to see why the maximum power point moves.'
+              : 'Watch live measurements from the board and test your control algorithm.' }}
+          </p>
+        </div>
+        <div class="learning-points" aria-label="Learning goals">
+          <span>Measure V, I, P</span>
+          <span>Compare algorithms</span>
+          <span>Trace the V-I curve</span>
+        </div>
       </div>
     </section>
 

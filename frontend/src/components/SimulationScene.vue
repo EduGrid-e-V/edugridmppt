@@ -144,7 +144,7 @@ function cellPath(panel) {
 
 <style scoped>
 .simulation-panel {
-  width: min(1440px, 100%);
+  width: min(1760px, 100%);
   margin: 14px auto 0;
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);

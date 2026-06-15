@@ -12,7 +12,7 @@
     </header>
 
     <div class="graph-frame">
-      <svg class="chart-svg" viewBox="0 0 640 420" role="img" aria-label="Power over time chart">
+      <svg class="chart-svg" viewBox="0 0 640 420" preserveAspectRatio="none" role="img" aria-label="Power over time chart">
         <rect class="plot-bg" :x="plot.x" :y="plot.y" :width="plot.width" :height="plot.height" rx="4" />
 
         <g class="grid">
@@ -199,6 +199,7 @@ function hexToRgba(hex, alpha) {
 .graph-card {
   display: flex;
   flex-direction: column;
+  min-height: 100%;
   gap: 0;
   padding: 0;
   border: 1px solid #d7e0df;
@@ -255,8 +256,10 @@ h3 {
 }
 
 .graph-frame {
-  flex: 0 0 auto;
-  margin: 14px;
+  flex: 1 1 auto;
+  display: flex;
+  min-height: 0;
+  margin: 10px;
   border: 1px solid #e2e9e7;
   border-radius: 8px;
   background: #fbfdfc;
@@ -266,7 +269,7 @@ h3 {
 .chart-svg {
   display: block;
   width: 100%;
-  height: auto;
+  height: 100%;
 }
 
 .plot-bg {
@@ -312,10 +315,6 @@ h3 {
   .graph-header {
     flex-direction: column;
     padding: 14px;
-  }
-
-  .graph-frame {
-    margin: 10px;
   }
 }
 </style>

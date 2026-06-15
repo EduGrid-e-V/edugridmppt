@@ -15,6 +15,8 @@ export default class MockConnector {
     this.loadPower = 0.0;
     this.filteredVoltage = 0.0;
     this.filteredCurrent = 0.0;
+    this.previousAutoPower = null;
+    this.autoDutyDirection = 1;
     
     // Simulated Panel Properties
     this.Voc = 49.5;
@@ -82,25 +84,46 @@ export default class MockConnector {
     this.loadPower = this.power * 0.82;
     this.loadCurrent = this.loadVoltage > 0 ? this.loadPower / this.loadVoltage : 0;
 
-    // 2. Auto Mode Logic (Mock P&O)
+    // 2. Auto Mode Logic
     if (this.mode === 'AUTO') {
-      // Very slow mock MPPT step
-      if (Math.random() > 0.9) { // Run occasionally
-        const step = 0.01;
-        // Blindly move towards Vmpp.
-        // If V > Vmpp, increase duty (reduce V). If V < Vmpp, decrease duty (increase V).
-        // To lower panel voltage, increase duty.
-        const targetVmpp = panelVoc * panelState.maximumPowerVoltageRatio;
-        if (this.voltage > targetVmpp + 0.4) {
-            this.duty = Math.min(0.95, this.duty + step);
-        } else if (this.voltage < targetVmpp - 0.4) {
-            this.duty = Math.max(0.0, this.duty - step);
+      if (Math.random() > 0.7) { // Run occasionally
+        if (this.algo === 'PNO') {
+          this.runPerturbAndObserveStep();
         } else {
-             // Jitter around MPP
-             this.duty += (Math.random() - 0.5) * 0.001;
+          this.runIncrementalConductanceLikeStep(panelVoc, panelState);
         }
       }
     }
+  }
+
+  runPerturbAndObserveStep() {
+    const step = 0.006;
+
+    if (this.previousAutoPower !== null && this.power < this.previousAutoPower) {
+      this.autoDutyDirection *= -1;
+    }
+
+    this.previousAutoPower = this.power;
+    this.duty = clamp(this.duty + this.autoDutyDirection * step, 0.0, 0.95);
+  }
+
+  runIncrementalConductanceLikeStep(panelVoc, panelState) {
+    const step = 0.01;
+    const targetVmpp = panelVoc * panelState.maximumPowerVoltageRatio;
+    const voltageDeadband = Math.max(0.75, panelVoc * step * 1.8);
+
+    if (this.voltage > targetVmpp + voltageDeadband) {
+      this.duty = Math.min(0.95, this.duty + step);
+    } else if (this.voltage < targetVmpp - voltageDeadband) {
+      this.duty = Math.max(0.0, this.duty - step);
+    } else {
+      this.duty = clamp(this.duty + (Math.random() - 0.5) * 0.004, 0.0, 0.95);
+    }
+  }
+
+  resetAutoTracker() {
+    this.previousAutoPower = null;
+    this.autoDutyDirection = 1;
   }
 
   calculateIrradiance() {
@@ -151,9 +174,18 @@ export default class MockConnector {
     console.log(`[MOCK] Command: ${command}`, params);
     
     if (command === 'set') {
-      if (params.mode) this.mode = params.mode;
-      if (params.duty !== undefined) this.duty = parseFloat(params.duty);
-      if (params.algo) this.algo = params.algo;
+      if (params.mode) {
+        this.mode = params.mode;
+        this.resetAutoTracker();
+      }
+      if (params.duty !== undefined) {
+        this.duty = parseFloat(params.duty);
+        this.resetAutoTracker();
+      }
+      if (params.algo) {
+        this.algo = params.algo;
+        this.resetAutoTracker();
+      }
     }
     else if (command === 'simulation') {
       if (params.sunPosition !== undefined) {
@@ -163,6 +195,7 @@ export default class MockConnector {
         this.cloudCover = clamp(parseFloat(params.cloudCover), 0, 1);
       }
       this.irradiance = this.calculateIrradiance();
+      this.resetAutoTracker();
     }
     else if (command === 'sweep') {
       console.log("[MOCK] Sweeping...");
