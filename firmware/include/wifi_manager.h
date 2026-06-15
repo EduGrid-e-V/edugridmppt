@@ -7,6 +7,7 @@
 
 void setupWiFi();
 void handleWiFi();
+const char* getWiFiSsid();
 void broadcastMpptData(float v, float i, float p);
 void broadcastSweepDone();
 void setWebMode(Mode requestedMode);

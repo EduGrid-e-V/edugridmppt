@@ -27,6 +27,13 @@ void setupDisplay();
 void displaySplash();
 
 /**
+ * @brief Shows the WiFi access point SSID in large text.
+ *
+ * @param ssid WiFi access point name to display.
+ */
+void displayWiFiSsid(const char* ssid);
+
+/**
  * @brief Updates the display with current telemetry data.
  * 
  * @param panelPowerWatts Solar panel power in Watts.

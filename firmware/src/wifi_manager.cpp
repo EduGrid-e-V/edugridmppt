@@ -9,6 +9,7 @@
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h>
 #include <LittleFS.h>
+#include <DNSServer.h>
 
 // Measurements from main.cpp
 extern float PanelVoltage;
@@ -23,9 +24,62 @@ extern Algorithm currentAlgorithm;
 
 AsyncWebServer server(WEB_PORT);
 AsyncWebSocket ws("/ws");
+DNSServer dnsServer;
 
 static bool webManualDutyActive = false;
 static float webManualDuty = PWM_MIN_DUTY;
+static char wifiAccessPointSsid[16] = "";
+static bool captivePortalIsRunning = false;
+
+static void buildWiFiSsid() {
+    uint8_t chipIdSuffix = (uint8_t)(ESP.getEfuseMac() & 0xFF);
+    snprintf(wifiAccessPointSsid,
+             sizeof(wifiAccessPointSsid),
+             "%s%02X",
+             WIFI_SSID_PREFIX,
+             chipIdSuffix);
+}
+
+const char* getWiFiSsid() {
+    if (wifiAccessPointSsid[0] == '\0') {
+        buildWiFiSsid();
+    }
+
+    return wifiAccessPointSsid;
+}
+
+static String dashboardUrl() {
+    return String("http://") + WiFi.softAPIP().toString() + "/";
+}
+
+static void redirectToDashboard(AsyncWebServerRequest* request) {
+    request->redirect(dashboardUrl());
+}
+
+static void sendNotFoundOrDashboard(AsyncWebServerRequest* request) {
+    String path = request->url();
+
+    if (path.startsWith("/api/")) {
+        request->send(404, "application/json", "{\"error\":\"not found\"}");
+        return;
+    }
+
+    redirectToDashboard(request);
+}
+
+static void setupCaptivePortalRoutes() {
+    server.on("/generate_204", HTTP_GET, redirectToDashboard);
+    server.on("/gen_204", HTTP_GET, redirectToDashboard);
+    server.on("/hotspot-detect.html", HTTP_GET, redirectToDashboard);
+    server.on("/library/test/success.html", HTTP_GET, redirectToDashboard);
+    server.on("/ncsi.txt", HTTP_GET, redirectToDashboard);
+    server.on("/connecttest.txt", HTTP_GET, redirectToDashboard);
+    server.on("/redirect", HTTP_GET, redirectToDashboard);
+    server.on("/canonical.html", HTTP_GET, redirectToDashboard);
+    server.on("/success.txt", HTTP_GET, redirectToDashboard);
+    server.on("/fwlink", HTTP_GET, redirectToDashboard);
+    server.onNotFound(sendNotFoundOrDashboard);
+}
 
 void broadcastMpptData(float v, float i, float p) {
     if (ws.count() == 0) return;
@@ -85,9 +139,18 @@ float getWebManualDuty() {
 
 void setupWiFi() {
   // Start Open Access Point (No Password)
-  WiFi.softAP(WIFI_SSID);
+  const char* ssid = getWiFiSsid();
+  WiFi.softAP(ssid);
+  Serial.print("WiFi SSID: ");
+  Serial.println(ssid);
   Serial.print("AP IP Address: ");
   Serial.println(WiFi.softAPIP());
+
+  captivePortalIsRunning = dnsServer.start(CAPTIVE_DNS_PORT,
+                                           "*",
+                                           WiFi.softAPIP());
+  Serial.print("Captive portal DNS: ");
+  Serial.println(captivePortalIsRunning ? "started" : "failed");
 
   if(!LittleFS.begin()){
     Serial.println("An Error has occurred while mounting LittleFS");
@@ -143,10 +206,15 @@ void setupWiFi() {
       request->send(200, "application/json", getSweepData());
   });
 
+  setupCaptivePortalRoutes();
   server.begin();
 }
 
 void handleWiFi() {
+    if (captivePortalIsRunning) {
+        dnsServer.processNextRequest();
+    }
+
     ws.cleanupClients();
 }
 

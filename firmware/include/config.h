@@ -30,8 +30,9 @@
     #define ENABLE_WIFI_DASHBOARD 1
 
     // WiFi Settings
-    #define WIFI_SSID       "EduGrid_MPPT"
-    #define WEB_PORT        80
+    #define WIFI_SSID_PREFIX "EduGrid"
+    #define WEB_PORT         80
+    #define CAPTIVE_DNS_PORT 53
 
 #elif defined(ARDUINO_NANO_ESP32) || defined(ARDUINO_ARDUINO_NANO_ESP32)
     // Arduino Nano ESP32 (S3) - Drop-in replacement for Nano
@@ -42,8 +43,9 @@
     #define ENABLE_WIFI_DASHBOARD 1
     
     // WiFi Settings
-    #define WIFI_SSID       "EduGrid_MPPT"
-    #define WEB_PORT        80
+    #define WIFI_SSID_PREFIX "EduGrid"
+    #define WEB_PORT         80
+    #define CAPTIVE_DNS_PORT 53
 
 #else
     #define GATE_PIN        9 /** @brief Pin number for the Buck converter MOSFET gate (OC1A on Uno/Nano). */
@@ -54,6 +56,14 @@
 
 #ifndef ENABLE_WIFI_DASHBOARD
 #define ENABLE_WIFI_DASHBOARD 0
+#endif
+
+#ifndef WIFI_SSID_PREFIX
+#define WIFI_SSID_PREFIX "EduGrid"
+#endif
+
+#ifndef CAPTIVE_DNS_PORT
+#define CAPTIVE_DNS_PORT 53
 #endif
 
 // ================= PWM SETTINGS =================
@@ -83,6 +93,9 @@
 
 /** @brief Update interval for the OLED display in milliseconds. */
 #define DISPLAY_PERIOD_MS 50
+
+/** @brief Time to show the WiFi SSID on the OLED after boot. */
+#define WIFI_SSID_DISPLAY_MS 15000UL
 
 // ================= POTENTIOMETER SETTINGS =================
 
