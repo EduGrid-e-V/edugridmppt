@@ -87,9 +87,15 @@ const ranges = computed(() => {
   const values = visible.map((point) => point.value);
   const xMin = visible[0]?.time || 0;
   const xMax = Math.max(xMin + 10, visible[visible.length - 1]?.time || 10);
-  const rawMax = props.max ?? Math.max(10, ...values);
+  const measuredMax = Math.max(0, ...values);
+  const hasAxisMaximumFloor = props.max !== undefined;
+  const rawMax = hasAxisMaximumFloor
+    ? Math.max(props.max, measuredMax)
+    : Math.max(10, measuredMax);
+  const yMax = hasAxisMaximumFloor && measuredMax <= props.max
+    ? props.max
+    : niceMax(rawMax * 1.15);
   const rawMin = props.min ?? Math.min(0, ...values);
-  const yMax = niceMax(rawMax * 1.15);
 
   return {
     xMin,

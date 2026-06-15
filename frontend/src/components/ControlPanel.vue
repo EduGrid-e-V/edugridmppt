@@ -10,42 +10,52 @@
       </div>
     </div>
 
-    <div class="metrics-grid">
-      <div class="metric-box power">
-        <div class="metric-label">Panel Power</div>
-        <div class="value">{{ power.toFixed(1) }}</div>
-        <div class="unit">W</div>
-      </div>
-      
-      <div class="metric-box voltage">
-        <div class="metric-label">Panel Voltage</div>
-        <div class="value">{{ voltage.toFixed(1) }}</div>
-        <div class="unit">V</div>
-      </div>
+    <div class="measurement-groups" aria-label="Live measurements">
+      <section class="measurement-group" aria-labelledby="panel-measurements">
+        <h3 id="panel-measurements">Panel measurements</h3>
+        <div class="metrics-grid">
+          <div class="metric-box power">
+            <div class="metric-label">Power</div>
+            <div class="value">{{ formatMeasurement(power) }}</div>
+            <div class="unit">W</div>
+          </div>
 
-      <div class="metric-box current">
-        <div class="metric-label">Panel Current</div>
-        <div class="value">{{ currentAmps.toFixed(2) }}</div> 
-        <div class="unit">A</div>
-      </div>
+          <div class="metric-box voltage">
+            <div class="metric-label">Voltage</div>
+            <div class="value">{{ formatMeasurement(voltage) }}</div>
+            <div class="unit">V</div>
+          </div>
 
-      <div class="metric-box load-power">
-        <div class="metric-label">Load Power</div>
-        <div class="value">{{ loadSensor ? loadPower.toFixed(1) : '--' }}</div>
-        <div class="unit">W</div>
-      </div>
+          <div class="metric-box current">
+            <div class="metric-label">Current</div>
+            <div class="value">{{ formatMeasurement(current) }}</div> 
+            <div class="unit">A</div>
+          </div>
+        </div>
+      </section>
 
-      <div class="metric-box load-voltage">
-        <div class="metric-label">Load Voltage</div>
-        <div class="value">{{ loadSensor ? loadVoltage.toFixed(1) : '--' }}</div>
-        <div class="unit">V</div>
-      </div>
+      <section class="measurement-group" aria-labelledby="load-measurements">
+        <h3 id="load-measurements">Load measurements</h3>
+        <div class="metrics-grid">
+          <div class="metric-box load-power">
+            <div class="metric-label">Power</div>
+            <div class="value">{{ formatLoadMeasurement(loadPower) }}</div>
+            <div class="unit">W</div>
+          </div>
 
-      <div class="metric-box load-current">
-        <div class="metric-label">Load Current</div>
-        <div class="value">{{ loadSensor ? loadCurrentAmps.toFixed(2) : '--' }}</div>
-        <div class="unit">A</div>
-      </div>
+          <div class="metric-box load-voltage">
+            <div class="metric-label">Voltage</div>
+            <div class="value">{{ formatLoadMeasurement(loadVoltage) }}</div>
+            <div class="unit">V</div>
+          </div>
+
+          <div class="metric-box load-current">
+            <div class="metric-label">Current</div>
+            <div class="value">{{ formatLoadMeasurement(loadCurrent) }}</div>
+            <div class="unit">A</div>
+          </div>
+        </div>
+      </section>
     </div>
 
     <div class="controls-section">
@@ -93,8 +103,6 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
-
 const props = defineProps({
   mode: String,
   algorithm: String,
@@ -108,10 +116,16 @@ const props = defineProps({
   loadSensor: Boolean
 })
 
-const currentAmps = computed(() => props.current || 0);
-const loadCurrentAmps = computed(() => props.loadCurrent || 0);
-
 defineEmits(['update:mode', 'update:algorithm', 'update:duty', 'trigger:sweep'])
+
+const formatMeasurement = (measurementValue) => {
+  const numericMeasurement = Number(measurementValue);
+  return Number.isFinite(numericMeasurement) ? numericMeasurement.toFixed(2) : '--';
+};
+
+const formatLoadMeasurement = (measurementValue) => {
+  return props.loadSensor ? formatMeasurement(measurementValue) : '--';
+};
 </script>
 
 <style scoped>
@@ -171,6 +185,24 @@ defineEmits(['update:mode', 'update:algorithm', 'update:duty', 'trigger:sweep'])
   display: grid;
   grid-template-columns: 1fr;
   gap: 10px;
+}
+
+.measurement-groups {
+  display: grid;
+  gap: 16px;
+}
+
+.measurement-group {
+  display: grid;
+  gap: 8px;
+}
+
+.measurement-group h3 {
+  margin: 0;
+  color: #2f7f66;
+  font-size: 0.78rem;
+  font-weight: 850;
+  text-transform: uppercase;
 }
 
 .metric-box {

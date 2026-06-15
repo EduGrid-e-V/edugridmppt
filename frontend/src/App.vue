@@ -95,7 +95,7 @@
         class="power-panel"
         title="Power Over Time"
         color="#d14b3f"
-        :max="2"
+        :max="powerChartAxisMaximum"
         :data="powerChartData"
       />
     </section>
@@ -151,6 +151,10 @@ const visibleCurveData = computed(() => {
 
   return sweepHasRun.value ? sweepCurveData.value : [];
 });
+
+const powerChartAxisMaximum = computed(() => (
+  experimentSource.value === 'real' ? 2 : undefined
+));
 
 const resetDashboardData = () => {
   voltage.value = 0;
