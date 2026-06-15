@@ -20,12 +20,26 @@
 #define INA_AVERAGE_MODE 2    /** @brief INA226 averaging: 0=1, 1=4, 2=16, 3=64, ... 7=1024 samples. */
 #define INA_CONVERSION_TIME_MODE 4 /** @brief INA226 conversion time: 4=1100us for bus and shunt. */
 
-#if defined(ARDUINO_NANO_ESP32) || defined(ARDUINO_ARDUINO_NANO_ESP32)
+#if defined(EDUGRID_ESP32_C3_SUPER_MINI)
+    // ESP32-C3 Super Mini test board.
+    // PlatformIO uses the compatible lolin_c3_mini board definition for USB CDC.
+    // Reassign these pins for the next EduGrid PCB revision.
+    #define GATE_PIN        3
+    #define BTN_PIN         2
+    #define POT_PIN         A0
+    #define ENABLE_WIFI_DASHBOARD 1
+
+    // WiFi Settings
+    #define WIFI_SSID       "EduGrid_MPPT"
+    #define WEB_PORT        80
+
+#elif defined(ARDUINO_NANO_ESP32) || defined(ARDUINO_ARDUINO_NANO_ESP32)
     // Arduino Nano ESP32 (S3) - Drop-in replacement for Nano
     // Uses the Arduino Pin Definitions to map to the correct physical location
     #define GATE_PIN        D5
     #define BTN_PIN         D3
     #define POT_PIN         A7
+    #define ENABLE_WIFI_DASHBOARD 1
     
     // WiFi Settings
     #define WIFI_SSID       "EduGrid_MPPT"
@@ -36,6 +50,10 @@
     #define BTN_PIN         3  /** @brief Pin number for the mode toggle button (connected to GND). */
     #define POT_PIN         A7 /** @brief Pin number for the potentiometer (manual duty control). */
 
+#endif
+
+#ifndef ENABLE_WIFI_DASHBOARD
+#define ENABLE_WIFI_DASHBOARD 0
 #endif
 
 // ================= PWM SETTINGS =================
@@ -70,6 +88,15 @@
 
 /** @brief Number of ADC samples to average for each reading. */
 #define POT_OVERSAMPLES   8
+
+/** @brief Raw ADC value at the minimum potentiometer position. */
+#define POT_ADC_MIN       0
+
+/** @brief Raw ADC value at the maximum potentiometer position. */
+#define POT_ADC_MAX       1023
+
+/** @brief Print potentiometer raw/smoothed/duty values while manual control reads the knob. */
+#define POT_DEBUG_SERIAL  0
 
 /** @brief IIR filter coefficient for potentiometer smoothing (0.0 to 1.0). */
 #define POT_IIR_ALPHA     0.65f
