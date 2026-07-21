@@ -4,6 +4,8 @@
 .DS_Store
 *.log
 .codex
+.platformio-core
+.venv
 
 # --- KiCad Phase/Temporary Files ---
 *fp-info-cache
