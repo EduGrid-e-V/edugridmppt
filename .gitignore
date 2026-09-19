@@ -5,6 +5,7 @@
 *.log
 .codex
 .platformio-core
+.venvset
 .venv
 
 # --- KiCad Phase/Temporary Files ---
