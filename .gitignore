@@ -38,3 +38,10 @@ _autosave-*
 **/production/
 **.zip
 
+# --- JavaScript ---
+node_modules/
+dist/
+.vite/
+*.local
+learn/dist/
+coverage/
