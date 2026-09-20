@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit -p jsconfig.json",
+    "validate": "node scripts/validate-content.mjs",
+    "check": "npm run typecheck && npm run test && npm run validate && npm run build"
   },
   "dependencies": {
     "pinia": "^4.0.3",

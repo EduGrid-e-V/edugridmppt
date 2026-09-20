@@ -1,5 +1,31 @@
-# Vue 3 + Vite
+# EduGrid PV Learning Site
 
-This template should help get you started developing with Vue 3 in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+The learning site is a static Vue application for guided photovoltaic and MPPT lessons. It is designed to work from a normal web host, a local file bundle, or the ESP32 captive portal.
 
-Learn more about IDE Support for Vue in the [Vue Docs Scaling up Guide](https://vuejs.org/guide/scaling-up/tooling.html#ide-support).
+## Run locally
+
+```bash
+cd learn
+npm install
+npm run dev
+```
+
+Run the complete local quality check with:
+
+```bash
+npm run check
+```
+
+## Add content
+
+Module content will live in `content/de/` and `content/en/`. Schemas and the full validator are introduced in workplan task T-4.1. After that task, run `npm run validate` whenever content changes.
+
+## Build
+
+Create the standard offline web build with:
+
+```bash
+npm run build
+```
+
+The ESP32-specific subset and its `build:esp` command are introduced in workplan task T-7.4. Until then, do not copy the regular web build into `firmware/data/`.
