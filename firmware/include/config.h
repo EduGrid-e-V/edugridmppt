@@ -74,6 +74,8 @@
 #define ALGO_INCCOND    0 /** @brief Identifier for the Incremental Conductance algorithm. */
 #define ALGO_PNO        1 /** @brief Identifier for the Perturb & Observe algorithm. */
 #define DEFAULT_MPPT_ALGORITHM  ALGO_INCCOND /** @brief Default MPPT Algorithm. */
+/** @brief Run the reference P&O instead of the student algorithm (teacher/demo use). */
+#define USE_REFERENCE_PNO 0
 
 #define MPPT_PERIOD_MS  100      /** @brief Time interval between MPPT updates in milliseconds. */ // 10 Hz MPPT loop
 #define DUTY_STEP_MIN   0.002f   /** @brief Minimum step size for duty cycle adjustment. */

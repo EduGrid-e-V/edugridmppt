@@ -11,6 +11,7 @@
  */
 
 #include "mppt_alg.h"
+#include "mppt_alg_reference.h"
 #include "config.h"
 #include "pwm_manager.h"
 #include <math.h>
@@ -48,6 +49,7 @@ void resetMPPT() {
     previousPanelCurrentAmps = 0.0f;
     previousPanelPowerWatts = 0.0f;
     lastDutyCycleDirection = -1;
+    resetReferencePerturbObserve();
 }
 
 void runSelectedMpptAlgorithm(float panelVoltageVolts,
@@ -72,6 +74,8 @@ void runSelectedMpptAlgorithm(float panelVoltageVolts,
 
     if (selectedAlgorithm == ALGORITHM_INCCOND) {
         runReferenceIncrementalConductance(measurement);
+    } else if (USE_REFERENCE_PNO) {
+        runReferencePerturbObserve(measurement);
     } else {
         runStudentMpptAlgorithm(measurement);
     }
@@ -108,12 +112,9 @@ void runStudentMpptAlgorithm(const SolarPanelMeasurement& measurement) {
      * The longer measurement.panelVoltageVolts-style names still work.
      */
 
-    // Simple working example: Perturb and Observe.
-    if (changeInPanelPowerWatts < 0.0f) {
-        lastDutyCycleDirection = -lastDutyCycleDirection;
-    }
-
-    duty.change(lastDutyCycleDirection * smallDutyCycleStep);
+    // TODO: Translate the tracking rule your group invented into C++ here.
+    // This no-op keeps the untouched student workspace warning-free.
+    (void)changeInPanelPowerWatts;
 
     /*
      * ##### END OF STUDENT SECTION #####
