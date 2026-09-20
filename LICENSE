@@ -1,0 +1,15 @@
+This repository contains open hardware, software, and educational material developed as part of EduGrid.
+
+Different parts of the repository are licensed as follows:
+
+Hardware design files, including schematics, PCB layouts, CAD files, and related manufacturing files, are licensed under the CERN Open Hardware Licence Version 2 – Strongly Reciprocal (CERN-OHL-S-2.0).
+
+Firmware and software, including microcontroller code and the web frontend, are licensed under the GNU General Public License v3.0 or later (GPL-3.0-or-later).
+
+Documentation, graphics, worksheets, and other educational material are licensed under the Creative Commons Attribution-ShareAlike 4.0 International License (CC BY-SA 4.0).
+
+You are free to use, study, modify, manufacture, and redistribute the material in this repository in accordance with the terms of the respective licenses.
+
+The intention of these licenses is to keep improvements and derivatives open and accessible to others.
+
+Unless stated otherwise in an individual file or directory, the license categories above apply based on the type of material.
