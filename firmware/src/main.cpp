@@ -157,7 +157,7 @@ static bool shouldKeepWiFiSsidOnDisplay(unsigned long now) {
 static void printStartupMessage() {
     Serial.println(F("\nEduGrid MPPT trainer"));
     Serial.println(F("Students edit firmware/src/mppt_alg.cpp"));
-    Serial.println(F("Gate PWM active; Duty 10-90%"));
+    Serial.println(F("Gate PWM active; Duty 0-98%"));
     Serial.print(F("INA226 shunt [Ohm]: "));
     Serial.println(SHUNT_OHMS, 6);
 }
@@ -262,11 +262,11 @@ static void runAutomaticOrManualControl() {
 
 #if defined(ESP32) && ENABLE_WIFI_DASHBOARD
     if (isWebManualDutyActive()) {
-        float knobDuty = 0.0f;
+        float sliderDuty = 0.0f;
 
-        if (readManualDutyIfPotentiometerMoved(knobDuty)) {
+        if (readManualDutyIfPotentiometerMoved(sliderDuty)) {
             clearWebManualDuty();
-            setConverterDutyCycle(knobDuty);
+            setConverterDutyCycle(sliderDuty);
             return;
         }
 
@@ -275,6 +275,6 @@ static void runAutomaticOrManualControl() {
     }
 #endif
 
-    float knobDuty = readManualDuty();
-    setConverterDutyCycle(knobDuty);
+    float sliderDuty = readManualDuty();
+    setConverterDutyCycle(sliderDuty);
 }

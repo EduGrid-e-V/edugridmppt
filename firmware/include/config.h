@@ -67,8 +67,8 @@
 #endif
 
 // ================= PWM SETTINGS =================
-#define PWM_MIN_DUTY    0.0f    /** @brief Minimum allowed PWM duty cycle (0.0 to 1.0). */ // 10 %
-#define PWM_MAX_DUTY    0.98f    /** @brief Maximum allowed PWM duty cycle (0.0 to 1.0). */ // 90 %
+#define PWM_MIN_DUTY    0.0f    /** @brief Minimum allowed PWM duty cycle (0.0 to 1.0). */
+#define PWM_MAX_DUTY    0.98f   /** @brief Maximum allowed PWM duty cycle (0.0 to 1.0). */
 
 // ================= MPPT ALGORITHM SETTINGS =================
 #define ALGO_INCCOND    0 /** @brief Identifier for the Incremental Conductance algorithm. */
@@ -112,7 +112,7 @@
 /** @brief Raw ADC value at the maximum potentiometer position. */
 #define POT_ADC_MAX       1023
 
-/** @brief Print potentiometer raw/smoothed/duty values while manual control reads the knob. */
+/** @brief Print potentiometer raw/smoothed/duty values while manual control reads the slider. */
 #define POT_DEBUG_SERIAL  0
 
 /** @brief IIR filter coefficient for potentiometer smoothing (0.0 to 1.0). */
@@ -127,7 +127,7 @@
 /** @brief Enable auto-scaling for potentiometer input (1=Enabled, 0=Disabled). */
 #define POT_AUTOCAL       0
 
-/** @brief Pot movement needed before the knob takes control back from the web slider. */
+/** @brief Pot movement needed before the physical slider takes control back from the web slider. */
 #define POT_TAKEOVER_THRESHOLD 0.03f
 
 // ================= DISPLAY SETTINGS =================
