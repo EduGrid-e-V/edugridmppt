@@ -58,4 +58,34 @@ describe('simulation engine', () => {
     engine.tick()
     expect(frames.at(-1)).toEqual(first)
   })
+
+  it('reproduces 500 noisy frames for the same seed', () => {
+    const first = createEngine({ seed: 42 })
+    const second = createEngine({ seed: 42 })
+    const firstFrames = []
+    const secondFrames = []
+    for (let index = 0; index < 500; index += 1) {
+      firstFrames.push(first.tick())
+      secondFrames.push(second.tick())
+    }
+    expect(secondFrames).toEqual(firstFrames)
+  })
+
+  it('produces different noise for different seeds within 20 ticks', () => {
+    const first = createEngine({ seed: 1 })
+    const second = createEngine({ seed: 2 })
+    const differences = []
+    for (let index = 0; index < 20; index += 1) {
+      differences.push(first.tick().v !== second.tick().v)
+    }
+    expect(differences).toContain(true)
+  })
+
+  it('can disable sensor noise completely', () => {
+    const first = createEngine({ seed: 1, noise: 0 })
+    const second = createEngine({ seed: 2, noise: 0 })
+    for (let index = 0; index < 20; index += 1) {
+      expect(first.tick()).toEqual(second.tick())
+    }
+  })
 })

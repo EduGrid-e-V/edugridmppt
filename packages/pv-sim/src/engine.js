@@ -18,14 +18,15 @@ function clampDuty(duty) {
 /**
  * Create a deterministic photovoltaic simulation engine.
  *
- * @param {{preset?: string | Record<string, any>, seed?: number, tickMs?: number, mpptPeriodMs?: number, onFrame?: (frame: Record<string, any>) => void}} [options] Preset values use V, A, m², 1/K and °C; periods use ms; seed is dimensionless.
+ * @param {{preset?: string | Record<string, any>, seed?: number, noise?: number, tickMs?: number, mpptPeriodMs?: number, onFrame?: (frame: Record<string, any>) => void}} [options] Preset values use V, A, m², 1/K and °C; periods use ms; seed and noise scale are dimensionless.
  * @returns {Record<string, any>} Stateful engine command interface.
  */
-export function createEngine({ preset = 'edugrid-kit', seed = 1, tickMs = 50, mpptPeriodMs = 100, onFrame = () => {} } = {}) {
+export function createEngine({ preset = 'edugrid-kit', seed = 1, noise = 1, tickMs = 50, mpptPeriodMs = 100, onFrame = () => {} } = {}) {
   const initialSeed = seed
   const initialPreset = typeof preset === 'string' ? getPreset(preset) : preset
   let timer = null
   let listeners = [onFrame]
+  let randomState = initialSeed >>> 0
   let state
 
   function initialState() {
@@ -55,6 +56,14 @@ export function createEngine({ preset = 'edugrid-kit', seed = 1, tickMs = 50, mp
   state = initialState()
   algorithms[state.algorithmId].reset(state.algorithmState)
 
+  function random() {
+    randomState += 0x6D2B79F5
+    let mixed = randomState
+    mixed = Math.imul(mixed ^ mixed >>> 15, mixed | 1)
+    mixed ^= mixed + Math.imul(mixed ^ mixed >>> 7, mixed | 61)
+    return ((mixed ^ mixed >>> 14) >>> 0) / 4294967296
+  }
+
   function conditions() {
     if (state.scenario) return sampleScenario(state.scenario, state.scenarioTimeS, state.ambientC)
     const G = state.environmentMode === 'sky'
@@ -69,11 +78,14 @@ export function createEngine({ preset = 'edugrid-kit', seed = 1, tickMs = 50, mp
     const panelParams = scale(state.preset, { G: environment.G, tCell })
     const rEff = effectiveResistance({ loadOhm: state.loadOhm, duty: state.duty, eta: state.eta })
     const point = solveOperatingPoint({ panelParams, rEff, duty: state.duty, eta: state.eta })
+    const gaussianish = () => 2 * (random() + random() + random() - 1.5)
+    const v = Math.max(0, point.v + noise * 0.0015 * state.preset.voc * gaussianish())
+    const i = Math.max(0, point.i + noise * 0.0015 * state.preset.isc * gaussianish())
     return {
       t: state.t,
-      v: point.v,
-      i: point.i,
-      p: point.p,
+      v,
+      i,
+      p: v * i,
       loadV: point.loadV,
       loadI: point.loadI,
       loadP: point.loadP,
@@ -134,9 +146,12 @@ export function createEngine({ preset = 'edugrid-kit', seed = 1, tickMs = 50, mp
     /** Restore initial state, time in s, and algorithm memory. */
     reset() {
       engine.pause()
+      randomState = initialSeed >>> 0
       state = initialState()
       algorithms[state.algorithmId].reset(state.algorithmState)
-      return emit(solveFrame())
+      const frame = emit(solveFrame())
+      randomState = initialSeed >>> 0
+      return frame
     },
     /** Run one MPPT decision in AUTO mode and emit one frame. */
     step() {
@@ -213,12 +228,14 @@ export function createEngine({ preset = 'edugrid-kit', seed = 1, tickMs = 50, mp
     /** Return 48 converter operating points in V, A, and W without changing visible duty. */
     sweep() {
       const previousDuty = state.duty
+      const previousRandomState = randomState
       const points = Array.from({ length: 48 }, (_, index) => {
         state.duty = DUTY_MIN + index * (DUTY_MAX - DUTY_MIN) / 47
         return solveFrame()
       })
       state.duty = previousDuty
       state.algorithmState.duty = previousDuty
+      randomState = previousRandomState
       return points
     },
     /** Return a read-only snapshot of dimensionless state and values in s, Ω, W/m² and °C. */
