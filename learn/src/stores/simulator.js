@@ -113,6 +113,12 @@ export const useSimulatorStore = defineStore('simulator', () => {
     engine.loadScenario(value)
   }
 
+  /** @param {number} timeS Scenario position in s. */
+  function seekScenario(timeS) {
+    if (rejectLocked('scenario')) return
+    engine.seekScenario(timeS)
+  }
+
   /** @param {string[]} controls Dimensionless control ids. */
   function setLocked(controls) { locked.value = [...controls] }
 
@@ -123,6 +129,6 @@ export const useSimulatorStore = defineStore('simulator', () => {
     locked, history, events, engine,
     start, pause, reset, step, sweep, setMode, setAlgorithm, setDuty,
     setPreset, setLoad, setIrradiance, setAmbient, setSunPosition,
-    setCloudCover, loadScenario, setLocked,
+    setCloudCover, loadScenario, seekScenario, setLocked,
   }
 })
