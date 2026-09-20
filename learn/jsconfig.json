@@ -5,6 +5,10 @@
     "moduleResolution": "bundler",
     "target": "ES2022",
     "strict": true,
+    "paths": {
+      "@edugrid/pv-sim": ["./../packages/pv-sim/src/index.js"],
+      "@/*": ["./src/*"]
+    },
     "noEmit": true
   },
   "include": [

@@ -36,7 +36,7 @@ export function solveOperatingPoint({ panelParams, rEff, duty, eta = 0.85 }) {
 
   const currentAt = typeof panelParams.currentAt === 'function'
     ? panelParams.currentAt
-    : (voltageV) => panelCurrentAt(voltageV, panelParams)
+    : (/** @type {number} */ voltageV) => panelCurrentAt(voltageV, panelParams)
 
   let v = 0
   let i = 0

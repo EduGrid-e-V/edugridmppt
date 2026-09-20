@@ -15,6 +15,11 @@ function clampDuty(duty) {
   return Math.max(DUTY_MIN, Math.min(DUTY_MAX, duty))
 }
 
+/** @param {string} id Algorithm id. @returns {(typeof algorithms)[keyof typeof algorithms]} Algorithm definition. */
+function getAlgorithm(id) {
+  return algorithms[/** @type {keyof typeof algorithms} */ (id)]
+}
+
 /**
  * Create a deterministic photovoltaic simulation engine.
  *
@@ -24,9 +29,11 @@ function clampDuty(duty) {
 export function createEngine({ preset = 'edugrid-kit', seed = 1, noise = 1, tickMs = 50, mpptPeriodMs = 100, onFrame = () => {} } = {}) {
   const initialSeed = seed
   const initialPreset = typeof preset === 'string' ? getPreset(preset) : preset
+  /** @type {ReturnType<typeof setInterval> | null} */
   let timer = null
   let listeners = [onFrame]
   let randomState = initialSeed >>> 0
+  /** @type {any} */
   let state
 
   function initialState() {
@@ -54,7 +61,7 @@ export function createEngine({ preset = 'edugrid-kit', seed = 1, noise = 1, tick
   }
 
   state = initialState()
-  algorithms[state.algorithmId].reset(state.algorithmState)
+  getAlgorithm(state.algorithmId).reset(state.algorithmState)
 
   function random() {
     randomState += 0x6D2B79F5
@@ -100,15 +107,17 @@ export function createEngine({ preset = 'edugrid-kit', seed = 1, noise = 1, tick
     }
   }
 
+  /** @param {Record<string, any>} frame Frame in V, A, W, s, W/m² and °C. */
   function emit(frame) {
     state.lastFrame = frame
     for (const listener of listeners) listener(frame)
     return frame
   }
 
+  /** @param {Record<string, any>} frame Frame in V, A, W, s, W/m² and °C. */
   function runAlgorithm(frame) {
     if (state.mode !== 'AUTO') return
-    const algorithm = algorithms[state.algorithmId]
+    const algorithm = getAlgorithm(state.algorithmId)
     state.algorithmState.duty = state.duty
     state.algorithmState.voc = state.preset.voc
     state.algorithmState.isc = state.preset.isc
@@ -148,7 +157,7 @@ export function createEngine({ preset = 'edugrid-kit', seed = 1, noise = 1, tick
       engine.pause()
       randomState = initialSeed >>> 0
       state = initialState()
-      algorithms[state.algorithmId].reset(state.algorithmState)
+      getAlgorithm(state.algorithmId).reset(state.algorithmState)
       const frame = emit(solveFrame())
       randomState = initialSeed >>> 0
       return frame
@@ -170,13 +179,13 @@ export function createEngine({ preset = 'edugrid-kit', seed = 1, noise = 1, tick
     setMode(mode) {
       if (!['AUTO', 'MANUAL'].includes(mode)) throw new RangeError(`Unknown mode: ${mode}`)
       state.mode = mode
-      algorithms[state.algorithmId].reset(state.algorithmState)
+      getAlgorithm(state.algorithmId).reset(state.algorithmState)
     },
     /** @param {string} id Algorithm identifier (dimensionless). */
     setAlgorithm(id) {
-      if (!algorithms[id]) throw new RangeError(`Unknown algorithm: ${id}`)
+      if (!Object.hasOwn(algorithms, id)) throw new RangeError(`Unknown algorithm: ${id}`)
       state.algorithmId = id
-      algorithms[id].reset(state.algorithmState)
+      algorithms[/** @type {keyof typeof algorithms} */ (id)].reset(state.algorithmState)
     },
     /** @param {number} duty Dimensionless converter duty. */
     setDuty(duty) {
@@ -188,7 +197,7 @@ export function createEngine({ preset = 'edugrid-kit', seed = 1, noise = 1, tick
       state.preset = typeof nextPreset === 'string' ? getPreset(nextPreset) : nextPreset
       state.algorithmState.voc = state.preset.voc
       state.algorithmState.isc = state.preset.isc
-      algorithms[state.algorithmId].reset(state.algorithmState)
+      getAlgorithm(state.algorithmId).reset(state.algorithmState)
     },
     /** @param {number} loadOhm Resistive load in Ω. */
     setLoad(loadOhm) {
