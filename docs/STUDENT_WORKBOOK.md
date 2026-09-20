@@ -540,7 +540,7 @@ The algorithm does not create power or change the cell's conversion efficiency. 
 
 The EduGrid board uses a **non-synchronous buck converter**:
 
-- NTR4171PT1G N-channel MOSFET as the controlled switch;
+- NTR4171PT1G P-channel MOSFET as the controlled high-side switch;
 - BC817 transistor as the gate driver;
 - SS26 Schottky diode as the freewheeling diode;
 - 2.2 mH inductor;
