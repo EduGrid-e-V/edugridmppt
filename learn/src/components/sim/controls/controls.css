@@ -1,0 +1,6 @@
+.control { display: grid; gap: var(--space-1); color: var(--ink); font-weight: 700; }
+.control span { display: flex; justify-content: space-between; gap: var(--space-2); }
+.control small { color: var(--ink-muted); font-weight: 500; }
+.control input, .control select, .scenario-player button { min-height: 44px; }
+.load-row { display: grid !important; grid-template-columns: 1fr 1fr; }
+fieldset.control { border: 1px solid var(--border); }
