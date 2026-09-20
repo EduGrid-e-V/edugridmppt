@@ -60,7 +60,7 @@
         <div class="learning-points" aria-label="Learning goals">
           <span>Measure V, I, P</span>
           <span>Compare algorithms</span>
-          <span>Trace the V-I curve</span>
+          <span>Trace the I–V curve</span>
         </div>
       </div>
     </section>

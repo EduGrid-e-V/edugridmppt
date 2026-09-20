@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" role="img" aria-labelledby="title desc">
+  <title id="title">EduGrid firmware code flow</title>
+  <desc id="desc">Setup runs once. Loop repeats and checks WiFi, input, soft start, the MPPT control timer, sensor settling, measurements, control, and the display timer.</desc>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0 0L9 3 0 6Z" fill="#0065bd"/></marker></defs>
+  <rect width="800" height="560" fill="#fff"/>
+  <style>
+    text{font-family:Arial,sans-serif;fill:#111}.title{font-size:25px;font-weight:700}.label{font-size:16px;font-weight:700}.small{font-size:13px}.box{fill:#fff;stroke:#111;stroke-width:2}.blue{fill:#e6f2fb;stroke:#0065bd}.arrow{fill:none;stroke:#0065bd;stroke-width:3;marker-end:url(#arrow)}
+  </style>
+  <text class="title" x="400" y="34" text-anchor="middle">Firmware: setup once, loop forever</text>
+  <rect class="box blue" x="40" y="80" width="220" height="128" rx="7"/>
+  <text class="label" x="150" y="108" text-anchor="middle">setup() — once</text>
+  <text class="small" x="62" y="135">• start Serial + input</text><text class="small" x="62" y="157">• start I2C + sensors + OLED</text><text class="small" x="62" y="179">• start PWM + optional WiFi</text><text class="small" x="62" y="201">• set initial duty + timers</text>
+  <path class="arrow" d="M260 144H330"/>
+  <rect class="box blue" x="340" y="80" width="420" height="420" rx="7"/>
+  <text class="label" x="550" y="108" text-anchor="middle">loop() — repeats</text>
+  <rect class="box" x="380" y="130" width="340" height="46" rx="5"/><text class="label" x="550" y="159" text-anchor="middle">handle WiFi + button + mode + soft-start</text>
+  <path class="arrow" d="M550 176V202"/>
+  <rect class="box" x="380" y="210" width="340" height="58" rx="5"/><text class="label" x="550" y="234" text-anchor="middle">MPPT timer due?</text><text class="small" x="550" y="255" text-anchor="middle">MPPT_PERIOD_MS</text>
+  <path class="arrow" d="M550 268V294"/>
+  <rect class="box" x="380" y="302" width="340" height="58" rx="5"/><text class="label" x="550" y="326" text-anchor="middle">PWM change settled?</text><text class="small" x="550" y="347" text-anchor="middle">INA_SETTLE_MS</text>
+  <path class="arrow" d="M550 360V386"/>
+  <rect class="box" x="380" y="394" width="160" height="60" rx="5"/><text class="label" x="460" y="419" text-anchor="middle">read sensors</text><text class="small" x="460" y="440" text-anchor="middle">calculate V × I</text>
+  <rect class="box" x="560" y="394" width="160" height="60" rx="5"/><text class="label" x="640" y="419" text-anchor="middle">run control</text><text class="small" x="640" y="440" text-anchor="middle">Auto or Manual</text>
+  <path class="arrow" d="M540 424H550"/>
+  <path class="arrow" d="M640 454V480H742V153H730"/>
+  <rect class="box" x="40" y="280" width="220" height="90" rx="7"/>
+  <text class="label" x="150" y="310" text-anchor="middle">display job</text><text class="small" x="150" y="334" text-anchor="middle">DISPLAY_PERIOD_MS</text><text class="small" x="150" y="355" text-anchor="middle">runs on its own timer</text>
+  <path class="arrow" d="M340 325H270"/>
+  <text class="small" x="400" y="540" text-anchor="middle">Timed checks keep jobs responsive without long blocking delays.</text>
+</svg>
