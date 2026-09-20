@@ -80,7 +80,9 @@
 #define DUTY_STEP_MAX   0.02f    /** @brief Maximum step size for duty cycle adjustment. */
 #define DUTY_STEP_START 0.01f    /** @brief Default step size for duty cycle adjustment. */
 #define SOFTSTART_MS    1000     /** @brief Duration of the soft-start phase in milliseconds. */
-#define ALPHA           0.2f     /** @brief Low-pass filter coefficient (0.0 to 1.0). Higher = less smoothing. */
+#define SENSOR_IIR_ALPHA 0.2f    /** @brief Low-pass filter coefficient (0.0 to 1.0). Higher = less smoothing. */
+/** @brief Enable the optional software IIR filter on sensor readings (1=on, 0=off). */
+#define ENABLE_SENSOR_IIR_FILTER 0
 #define COMPARE_MEASUREMENT_FILTERS 1 /** @brief Print raw-vs-filtered sensor data over Serial when enabled. */
 #define FILTER_COMPARE_PERIOD_MS 1000 /** @brief Interval for raw-vs-filtered Serial comparison. */
 #define VIN_VALID_MIN   0.5f     /** @brief Minimum valid input voltage to start MPPT. */
