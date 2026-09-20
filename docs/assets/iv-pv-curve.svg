@@ -1,24 +1,34 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 440" role="img" aria-labelledby="title desc">
-  <title id="title">Solar-panel I–V and P–V curves</title>
-  <desc id="desc">Current and power are plotted against a shared voltage axis. Short-circuit current, open-circuit voltage, and the maximum power point are labelled.</desc>
-  <rect width="800" height="440" fill="#fff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 650" role="img" aria-labelledby="title desc">
+  <title id="title">Typical photovoltaic current-voltage and power-voltage curves</title>
+  <desc id="desc">Two aligned plots share a normalized voltage axis. The upper I-V curve runs from short-circuit current to open-circuit voltage. The lower P-V curve starts and ends at zero and peaks at the same maximum-power voltage as the marked point on the I-V curve.</desc>
+  <rect width="900" height="650" fill="#fff"/>
   <style>
-    text{font-family:Arial,sans-serif;fill:#111}.title{font-size:25px;font-weight:700}.label{font-size:17px}.small{font-size:14px}.axis{fill:none;stroke:#111;stroke-width:2}.grid{fill:none;stroke:#bbb;stroke-width:1}.iv{fill:none;stroke:#0065bd;stroke-width:5}.pv{fill:none;stroke:#555;stroke-width:5}.guide{fill:none;stroke:#444;stroke-width:1.5;stroke-dasharray:7 6}.mark{fill:#fff;stroke:#111;stroke-width:3}
+    text{font-family:Arial,sans-serif;fill:#171717}.title{font-size:27px;font-weight:700}.panel-title{font-size:18px;font-weight:700}.label{font-size:16px}.small{font-size:14px}.axis{fill:none;stroke:#222;stroke-width:2}.grid{fill:none;stroke:#d0d0d0;stroke-width:1}.iv{fill:none;stroke:#0065bd;stroke-width:5;stroke-linecap:round;stroke-linejoin:round}.pv{fill:none;stroke:#d1493f;stroke-width:5;stroke-linecap:round;stroke-linejoin:round}.guide{fill:none;stroke:#555;stroke-width:1.5;stroke-dasharray:7 6}.point-iv{fill:#fff;stroke:#0065bd;stroke-width:4}.point-pv{fill:#fff;stroke:#d1493f;stroke-width:4}.endpoint{fill:#0065bd}.note{fill:#f5f8fa;stroke:#a8b3ba;stroke-width:1.5}
   </style>
-  <text class="title" x="400" y="36" text-anchor="middle">One voltage axis, two views of the panel</text>
-  <g class="grid"><path d="M90 95H740M90 155H740M90 215H740M90 275H740M90 335H740"/><path d="M220 75V355M350 75V355M480 75V355M610 75V355"/></g>
-  <path class="axis" d="M90 70V355H745"/>
-  <text class="label" x="418" y="402" text-anchor="middle">Voltage V (V)</text>
-  <text class="label" transform="translate(28 220) rotate(-90)" text-anchor="middle">Current I (A)</text>
-  <text class="label" transform="translate(785 220) rotate(90)" text-anchor="middle">Power P (W)</text>
-  <path class="iv" d="M90 105C260 105 440 108 545 120C625 129 674 162 700 225C716 265 728 316 733 355"/>
-  <path class="pv" d="M90 355C230 310 360 244 475 167C536 127 586 111 622 133C680 168 716 269 733 355"/>
-  <circle class="mark" cx="584" cy="119" r="8"/><circle class="mark" cx="584" cy="119" r="3" fill="#0065bd"/>
-  <path class="guide" d="M584 119V355"/>
-  <text class="label" x="597" y="96">MPP on both curves</text>
-  <circle cx="90" cy="105" r="6" fill="#0065bd"/><text class="label" x="101" y="92">I_sc</text>
-  <circle cx="733" cy="355" r="6" fill="#0065bd"/><text class="label" x="702" y="382">V_oc</text>
-  <line x1="120" y1="52" x2="170" y2="52" class="iv"/><text class="small" x="182" y="57">I–V curve</text>
-  <line x1="315" y1="52" x2="365" y2="52" class="pv"/><text class="small" x="377" y="57">P–V curve</text>
-  <text class="small" x="400" y="428" text-anchor="middle">Power is zero at short circuit and open circuit, with a maximum between them.</text>
+  <text class="title" x="450" y="38" text-anchor="middle">One PV module, two related curves</text>
+  <text class="small" x="450" y="62" text-anchor="middle">Normalized axes show shape; actual voltage, current, and power depend on the panel and conditions.</text>
+  <text class="panel-title" x="110" y="91">Current–voltage (I–V)</text>
+  <g class="grid"><path d="M110 140H820M110 200H820M110 260H820"/><path d="M252 100V280M394 100V280M536 100V280M678 100V280"/></g>
+  <path class="axis" d="M110 100V280H820"/>
+  <text class="label" transform="translate(40 190) rotate(-90)" text-anchor="middle">Current I / I<tspan baseline-shift="sub" font-size="12">sc</tspan></text>
+  <text class="small" x="95" y="109" text-anchor="end">1.0</text><text class="small" x="95" y="285" text-anchor="end">0</text>
+  <path class="iv" d="M110 105L181 105L252 105L323 105L394 105L465 105.2L536 106.1L607 109.9L669 120.9L678 123.8L714 139.5L749 166L785 209.8L806 248L820 280"/>
+  <circle class="endpoint" cx="110" cy="105" r="6"/><text class="label" x="126" y="130">short circuit: (0, I<tspan baseline-shift="sub" font-size="12">sc</tspan>)</text>
+  <circle class="endpoint" cx="820" cy="280" r="6"/><text class="label" x="810" y="266" text-anchor="end">open circuit: (V<tspan baseline-shift="sub" font-size="12">oc</tspan>, 0)</text>
+  <circle class="point-iv" cx="669" cy="120.9" r="8"/><path class="axis" d="M679 115L723 97"/>
+  <text class="label" x="730" y="99">MPP = (V<tspan baseline-shift="sub" font-size="12">mp</tspan>, I<tspan baseline-shift="sub" font-size="12">mp</tspan>)</text>
+  <text class="panel-title" x="110" y="341">Power–voltage (P–V), where P = V × I</text>
+  <g class="grid"><path d="M110 390H820M110 450H820M110 510H820"/><path d="M252 350V530M394 350V530M536 350V530M678 350V530"/></g>
+  <path class="axis" d="M110 350V530H820"/>
+  <text class="label" transform="translate(40 440) rotate(-90)" text-anchor="middle">Power P / P<tspan baseline-shift="sub" font-size="12">mp</tspan></text>
+  <text class="small" x="95" y="359" text-anchor="end">1.0</text><text class="small" x="95" y="535" text-anchor="end">0</text>
+  <path class="pv" d="M110 530L181 505.5L252 481.1L323 456.6L394 432.1L465 407.6L536 384.1L607 363.6L669 355L678 355.4L714 362.9L749 386.5L785 436.7L806 486.2L820 530"/>
+  <circle class="point-pv" cx="669" cy="355" r="8"/><text class="label" x="683" y="348">maximum P<tspan baseline-shift="sub" font-size="12">mp</tspan></text>
+  <circle cx="110" cy="530" r="6" fill="#d1493f"/><circle cx="820" cy="530" r="6" fill="#d1493f"/>
+  <path class="guide" d="M669 120.9V560"/>
+  <text class="small" x="669" y="580" text-anchor="middle">V<tspan baseline-shift="sub" font-size="11">mp</tspan></text>
+  <text class="label" x="465" y="614" text-anchor="middle">Normalized voltage V / V<tspan baseline-shift="sub" font-size="12">oc</tspan></text>
+  <text class="small" x="110" y="580" text-anchor="middle">0</text><text class="small" x="820" y="580" text-anchor="middle">V<tspan baseline-shift="sub" font-size="11">oc</tspan></text>
+  <rect class="note" x="180" y="622" width="540" height="22" rx="4"/>
+  <text class="small" x="450" y="638" text-anchor="middle">The two MPP markers share V<tspan baseline-shift="sub" font-size="11">mp</tspan>; their vertical positions use different quantities.</text>
 </svg>

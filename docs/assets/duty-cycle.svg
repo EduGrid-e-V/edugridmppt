@@ -1,13 +1,32 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 440" role="img" aria-labelledby="title desc">
-  <title id="title">PWM duty-cycle examples</title>
-  <desc id="desc">Square waves at ten, fifty, and ninety percent duty cycle. The on-time is shaded blue in each period.</desc>
-  <rect width="800" height="440" fill="#fff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" role="img" aria-labelledby="title desc">
+  <title id="title">PWM duty-cycle examples over three periods</title>
+  <desc id="desc">Ten, fifty, and ninety percent PWM waveforms each repeat for three equal periods. Blue shading marks every high interval. A dimension line identifies one full period and another identifies the on-time.</desc>
+  <rect width="900" height="520" fill="#fff"/>
   <style>
-    text{font-family:Arial,sans-serif;fill:#111}.title{font-size:25px;font-weight:700}.label{font-size:18px;font-weight:700}.small{font-size:14px}.axis{stroke:#111;stroke-width:2}.wave{fill:none;stroke:#0065bd;stroke-width:4;stroke-linejoin:round}.on{fill:#0065bd;opacity:.18}.period{stroke:#555;stroke-width:1.5;stroke-dasharray:6 5}
+    text{font-family:Arial,sans-serif;fill:#171717}.title{font-size:27px;font-weight:700}.label{font-size:18px;font-weight:700}.small{font-size:14px}.axis{fill:none;stroke:#222;stroke-width:1.5}.wave{fill:none;stroke:#0065bd;stroke-width:4;stroke-linejoin:round;stroke-linecap:square}.on{fill:#dcecf8}.boundary{fill:none;stroke:#999;stroke-width:1;stroke-dasharray:4 5}.dimension{fill:none;stroke:#555;stroke-width:1.5}
   </style>
-  <text class="title" x="400" y="38" text-anchor="middle">Same period, different ON time</text>
-  <g transform="translate(0 0)"><text class="label" x="45" y="111">10%</text><rect class="on" x="140" y="76" width="52" height="62"/><path class="axis" d="M130 138H700"/><path class="wave" d="M140 138V76H192V138H660"/><path class="period" d="M140 62V155M660 62V155"/><text class="small" x="400" y="164" text-anchor="middle">one period T</text></g>
-  <g transform="translate(0 120)"><text class="label" x="45" y="111">50%</text><rect class="on" x="140" y="76" width="260" height="62"/><path class="axis" d="M130 138H700"/><path class="wave" d="M140 138V76H400V138H660"/><path class="period" d="M140 62V155M660 62V155"/><text class="small" x="270" y="99" text-anchor="middle">ON</text><text class="small" x="530" y="130" text-anchor="middle">OFF</text></g>
-  <g transform="translate(0 240)"><text class="label" x="45" y="111">90%</text><rect class="on" x="140" y="76" width="468" height="62"/><path class="axis" d="M130 138H700"/><path class="wave" d="M140 138V76H608V138H660"/><path class="period" d="M140 62V155M660 62V155"/></g>
-  <text class="small" x="400" y="426" text-anchor="middle">Duty cycle D = ON time / period T. PWM frequency is 1 / T.</text>
+  <text class="title" x="450" y="38" text-anchor="middle">Duty cycle changes pulse width, not period</text>
+  <text class="small" x="450" y="63" text-anchor="middle">Each row shows three complete periods. The rising edges stay equally spaced.</text>
+  <g transform="translate(0 10)">
+    <text class="label" x="58" y="135">10%</text><text class="small" x="58" y="157">short ON time</text>
+    <g class="boundary"><path d="M210 92V170M390 92V170M570 92V170M750 92V170"/></g>
+    <g class="on"><rect x="210" y="102" width="18" height="52"/><rect x="390" y="102" width="18" height="52"/><rect x="570" y="102" width="18" height="52"/></g>
+    <path class="axis" d="M185 154H775"/><path class="wave" d="M210 154V102H228V154H390V102H408V154H570V102H588V154H750"/>
+  </g>
+  <g transform="translate(0 140)">
+    <text class="label" x="58" y="135">50%</text><text class="small" x="58" y="157">equal ON / OFF</text>
+    <g class="boundary"><path d="M210 92V170M390 92V170M570 92V170M750 92V170"/></g>
+    <g class="on"><rect x="210" y="102" width="90" height="52"/><rect x="390" y="102" width="90" height="52"/><rect x="570" y="102" width="90" height="52"/></g>
+    <path class="axis" d="M185 154H775"/><path class="wave" d="M210 154V102H300V154H390V102H480V154H570V102H660V154H750"/>
+    <text class="small" x="255" y="129" text-anchor="middle">ON</text><text class="small" x="345" y="148" text-anchor="middle">OFF</text>
+  </g>
+  <g transform="translate(0 270)">
+    <text class="label" x="58" y="135">90%</text><text class="small" x="58" y="157">long ON time</text>
+    <g class="boundary"><path d="M210 92V170M390 92V170M570 92V170M750 92V170"/></g>
+    <g class="on"><rect x="210" y="102" width="162" height="52"/><rect x="390" y="102" width="162" height="52"/><rect x="570" y="102" width="162" height="52"/></g>
+    <path class="axis" d="M185 154H775"/><path class="wave" d="M210 154V102H372V154H390V102H552V154H570V102H732V154H750"/>
+  </g>
+  <path class="dimension" d="M210 486H390M210 479V493M390 479V493"/><text class="small" x="300" y="510" text-anchor="middle">one period T</text>
+  <path class="dimension" d="M210 461H300M210 455V467M300 455V467"/><text class="small" x="255" y="452" text-anchor="middle">t<tspan baseline-shift="sub" font-size="11">on</tspan> at 50%</text>
+  <text class="label" x="595" y="491">D = t<tspan baseline-shift="sub" font-size="12">on</tspan> / T</text><text class="small" x="595" y="512">frequency f = 1 / T</text>
 </svg>

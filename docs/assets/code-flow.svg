@@ -1,30 +1,27 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" role="img" aria-labelledby="title desc">
-  <title id="title">EduGrid firmware code flow</title>
-  <desc id="desc">Setup runs once. Loop repeats and checks WiFi, input, soft start, the MPPT control timer, sensor settling, measurements, control, and the display timer.</desc>
-  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0 0L9 3 0 6Z" fill="#0065bd"/></marker></defs>
-  <rect width="800" height="560" fill="#fff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 950 650" role="img" aria-labelledby="title desc">
+  <title id="title">EduGrid firmware setup and repeating loop</title>
+  <desc id="desc">Setup initializes hardware once and enters loop. Each loop services communication and inputs. When the control timer is due and the sensor has settled, the firmware measures and applies automatic or manual control. When the display timer is due, it updates the display. Every branch rejoins before the next loop iteration.</desc>
+  <defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4" orient="auto" markerUnits="strokeWidth"><path d="M0 0L8 4L0 8Z" fill="#0065bd"/></marker></defs>
+  <rect width="950" height="650" fill="#fff"/>
   <style>
-    text{font-family:Arial,sans-serif;fill:#111}.title{font-size:25px;font-weight:700}.label{font-size:16px;font-weight:700}.small{font-size:13px}.box{fill:#fff;stroke:#111;stroke-width:2}.blue{fill:#e6f2fb;stroke:#0065bd}.arrow{fill:none;stroke:#0065bd;stroke-width:3;marker-end:url(#arrow)}
+    text{font-family:Arial,sans-serif;fill:#171717}.title{font-size:27px;font-weight:700}.label{font-size:15px;font-weight:700}.small{font-size:12px}.box{fill:#fff;stroke:#222;stroke-width:2}.setup{fill:#f2f2f2;stroke:#222;stroke-width:2}.decision{fill:#e8f3fb;stroke:#0065bd;stroke-width:2}.flow{fill:none;stroke:#0065bd;stroke-width:3;marker-end:url(#arrow)}.join{fill:#0065bd}
   </style>
-  <text class="title" x="400" y="34" text-anchor="middle">Firmware: setup once, loop forever</text>
-  <rect class="box blue" x="40" y="80" width="220" height="128" rx="7"/>
-  <text class="label" x="150" y="108" text-anchor="middle">setup() — once</text>
-  <text class="small" x="62" y="135">• start Serial + input</text><text class="small" x="62" y="157">• start I2C + sensors + OLED</text><text class="small" x="62" y="179">• start PWM + optional WiFi</text><text class="small" x="62" y="201">• set initial duty + timers</text>
-  <path class="arrow" d="M260 144H330"/>
-  <rect class="box blue" x="340" y="80" width="420" height="420" rx="7"/>
-  <text class="label" x="550" y="108" text-anchor="middle">loop() — repeats</text>
-  <rect class="box" x="380" y="130" width="340" height="46" rx="5"/><text class="label" x="550" y="159" text-anchor="middle">handle WiFi + button + mode + soft-start</text>
-  <path class="arrow" d="M550 176V202"/>
-  <rect class="box" x="380" y="210" width="340" height="58" rx="5"/><text class="label" x="550" y="234" text-anchor="middle">MPPT timer due?</text><text class="small" x="550" y="255" text-anchor="middle">MPPT_PERIOD_MS</text>
-  <path class="arrow" d="M550 268V294"/>
-  <rect class="box" x="380" y="302" width="340" height="58" rx="5"/><text class="label" x="550" y="326" text-anchor="middle">PWM change settled?</text><text class="small" x="550" y="347" text-anchor="middle">INA_SETTLE_MS</text>
-  <path class="arrow" d="M550 360V386"/>
-  <rect class="box" x="380" y="394" width="160" height="60" rx="5"/><text class="label" x="460" y="419" text-anchor="middle">read sensors</text><text class="small" x="460" y="440" text-anchor="middle">calculate V × I</text>
-  <rect class="box" x="560" y="394" width="160" height="60" rx="5"/><text class="label" x="640" y="419" text-anchor="middle">run control</text><text class="small" x="640" y="440" text-anchor="middle">Auto or Manual</text>
-  <path class="arrow" d="M540 424H550"/>
-  <path class="arrow" d="M640 454V480H742V153H730"/>
-  <rect class="box" x="40" y="280" width="220" height="90" rx="7"/>
-  <text class="label" x="150" y="310" text-anchor="middle">display job</text><text class="small" x="150" y="334" text-anchor="middle">DISPLAY_PERIOD_MS</text><text class="small" x="150" y="355" text-anchor="middle">runs on its own timer</text>
-  <path class="arrow" d="M340 325H270"/>
-  <text class="small" x="400" y="540" text-anchor="middle">Timed checks keep jobs responsive without long blocking delays.</text>
+  <text class="title" x="475" y="38" text-anchor="middle">Firmware: initialize once, then repeat short timed jobs</text>
+  <rect class="setup" x="35" y="85" width="220" height="128" rx="7"/><text class="label" x="145" y="113" text-anchor="middle">setup() — once</text><text class="small" x="55" y="139">• inputs, I²C, sensors, display</text><text class="small" x="55" y="161">• PWM and optional WiFi</text><text class="small" x="55" y="183">• minimum duty and timers</text>
+  <path class="flow" d="M255 149H325"/>
+  <rect class="box" x="325" y="105" width="250" height="88" rx="7"/><text class="label" x="450" y="133" text-anchor="middle">Start one loop() pass</text><text class="small" x="450" y="156" text-anchor="middle">service WiFi, button, mode</text><text class="small" x="450" y="176" text-anchor="middle">and non-blocking soft-start</text>
+  <path class="flow" d="M575 149H635"/>
+  <path class="decision" d="M730 90L825 149L730 208L635 149Z"/><text class="label" x="730" y="145" text-anchor="middle">Control timer</text><text class="small" x="730" y="165" text-anchor="middle">due and settled?</text>
+  <path class="flow" d="M730 208V262"/><text class="small" x="742" y="234">YES</text>
+  <rect class="box" x="620" y="262" width="220" height="72" rx="7"/><text class="label" x="730" y="291" text-anchor="middle">Read V and I</text><text class="small" x="730" y="313" text-anchor="middle">calculate P; send telemetry</text>
+  <path class="flow" d="M730 334V378"/>
+  <rect class="box" x="620" y="378" width="220" height="72" rx="7"/><text class="label" x="730" y="407" text-anchor="middle">Apply control</text><text class="small" x="730" y="429" text-anchor="middle">Auto MPPT or Manual duty</text>
+  <path class="flow" d="M635 149H540V487H600"/><text class="small" x="591" y="137">NO</text>
+  <path class="flow" d="M730 450V487H600"/><circle class="join" cx="600" cy="487" r="6"/>
+  <path class="flow" d="M600 487H415"/>
+  <path class="decision" d="M320 428L415 487L320 546L225 487Z"/><text class="label" x="320" y="483" text-anchor="middle">Display timer</text><text class="small" x="320" y="503" text-anchor="middle">due?</text>
+  <path class="flow" d="M320 546V581H180"/><text class="small" x="332" y="570">YES</text>
+  <rect class="box" x="35" y="552" width="145" height="58" rx="7"/><text class="label" x="107" y="578" text-anchor="middle">Update display</text><text class="small" x="107" y="598" text-anchor="middle">or retain WiFi name</text>
+  <path class="flow" d="M225 487H15V65H450V105"/><text class="small" x="173" y="475">NO</text>
+  <path class="flow" d="M180 581H895V65H450V105"/><text class="small" x="800" y="628">next loop() pass</text>
 </svg>
