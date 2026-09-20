@@ -432,6 +432,12 @@ With teacher approval, test the same light change with each value:
 4. Why might one fixed step size be a compromise?
 5. Sketch an adaptive rule that changes step size without implementing it yet.
 
+> **Hint:** use a larger step while power is changing consistently and the
+> operating point is far from the peak, then reduce the step when reversals or
+> a near-zero slope show that the tracker is close. This can recover from a
+> passing cloud faster without increasing steady-state oscillation—but it also
+> adds thresholds that must be justified and tested.
+
 ---
 
 ## 10. A Second Idea: Incremental Conductance
