@@ -3,7 +3,7 @@
     <header class="graph-header">
       <div>
         <p class="graph-kicker">Panel characteristic</p>
-        <h3>V-I Curve</h3>
+        <h3>I–V curve</h3>
       </div>
       <div class="legend" aria-label="Chart legend">
         <span><i class="dot live"></i>Live point</span>

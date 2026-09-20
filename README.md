@@ -17,7 +17,7 @@
 
 EduGrid MPPT is part of the EduGrid e.V initiative for free education in renewable energies. It is made for students, teachers, workshops, and curious people who want to understand solar power with their own hands.
 
-You do not need to be an expert to begin. Start by turning a knob, watching the display, and seeing how much power a small solar panel can produce. Later, when you feel ready, you can open the code and teach the board your own strategy for finding more power.
+You do not need to be an expert to begin. Start by moving the slider, watching the display, and seeing how much power a small solar panel can produce. Later, when you feel ready, you can open the code and teach the board your own strategy for finding more power.
 
 ![EduGrid MPPT board](firmware/docs/arduino_mppt.png)
 
@@ -62,4 +62,3 @@ The [Student Workbook](docs/STUDENT_WORKBOOK.md) is written so it can be used in
 EduGrid e.V works to make renewable energy education freely available. This project supports that mission with open learning material, open hardware files, and firmware that students can actually read and change.
 
 Renewable energy becomes less mysterious when learners can touch it, measure it, and improve it. That is the spirit of EduGrid MPPT.
-

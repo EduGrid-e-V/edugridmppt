@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 420" role="img" aria-labelledby="title desc">
+  <title id="title">Perturb and Observe control loop</title>
+  <desc id="desc">The controller perturbs duty, measures voltage and current, calculates power, compares with the previous power, continues or reverses direction, changes duty, and repeats.</desc>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0 0L9 3 0 6Z" fill="#0065bd"/></marker></defs>
+  <rect width="800" height="420" fill="#fff"/>
+  <style>
+    text{font-family:Arial,sans-serif;fill:#111}.title{font-size:25px;font-weight:700}.label{font-size:16px;font-weight:700}.small{font-size:13px}.box{fill:#fff;stroke:#111;stroke-width:2}.decision{fill:#e6f2fb;stroke:#0065bd;stroke-width:2}.arrow{fill:none;stroke:#0065bd;stroke-width:3;marker-end:url(#arrow)}
+  </style>
+  <text class="title" x="400" y="36" text-anchor="middle">Perturb and Observe repeats one evidence loop</text>
+  <rect class="box" x="40" y="120" width="125" height="70" rx="6"/><text class="label" x="102" y="149" text-anchor="middle">Perturb</text><text class="small" x="102" y="171" text-anchor="middle">one duty step</text>
+  <path class="arrow" d="M165 155H210"/>
+  <rect class="box" x="220" y="120" width="135" height="70" rx="6"/><text class="label" x="287" y="149" text-anchor="middle">Measure</text><text class="small" x="287" y="171" text-anchor="middle">V and I</text>
+  <path class="arrow" d="M355 155H400"/>
+  <rect class="box" x="410" y="120" width="135" height="70" rx="6"/><text class="label" x="477" y="149" text-anchor="middle">Calculate</text><text class="small" x="477" y="171" text-anchor="middle">P = V × I</text>
+  <path class="arrow" d="M545 155H590"/>
+  <path class="decision" d="M665 95L745 155 665 215 585 155Z"/><text class="label" x="665" y="149" text-anchor="middle">P better?</text><text class="small" x="665" y="171" text-anchor="middle">compare previous</text>
+  <path class="arrow" d="M630 195V250H485"/><text class="small" x="603" y="239">yes</text>
+  <rect class="box" x="340" y="240" width="145" height="70" rx="6"/><text class="label" x="412" y="269" text-anchor="middle">Continue</text><text class="small" x="412" y="291" text-anchor="middle">same direction</text>
+  <path class="arrow" d="M700 195V345H485"/><text class="small" x="709" y="239">no</text>
+  <rect class="box" x="340" y="330" width="145" height="70" rx="6"/><text class="label" x="412" y="359" text-anchor="middle">Reverse</text><text class="small" x="412" y="381" text-anchor="middle">change direction</text>
+  <path class="arrow" d="M340 275H235"/><path class="arrow" d="M340 365H235"/>
+  <rect class="box" x="80" y="270" width="155" height="70" rx="6"/><text class="label" x="157" y="299" text-anchor="middle">Change duty</text><text class="small" x="157" y="321" text-anchor="middle">one signed step</text>
+  <path class="arrow" d="M80 305H25V155H30"/>
+</svg>

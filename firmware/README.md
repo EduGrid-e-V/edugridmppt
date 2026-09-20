@@ -10,7 +10,7 @@ Firmware for the EduGrid MPPT trainer. It runs on the classic Arduino Nano and t
 - Panel/input INA226 plus optional load/output INA226
 - OLED telemetry with SSD1306 default and SH1106 option
 - Manual duty control with button and potentiometer
-- Nano ESP32 WiFi dashboard with live telemetry, manual duty, algorithm selection, and IV sweep
+- Nano ESP32 WiFi dashboard with live telemetry, manual duty, algorithm selection, and I–V sweep
 
 ## Hardware
 
@@ -73,10 +73,10 @@ For the Nano ESP32 dashboard, also upload the filesystem image:
 pio run -e arduino_nano_esp32 -t uploadfs
 ```
 
-The board creates an open WiFi access point:
+The board creates an open WiFi access point whose final two hexadecimal characters identify the individual board. Its OLED shows the full name for the first 15 seconds after power-up, for example:
 
 ```text
-SSID: EduGrid_MPPT
+SSID: EduGrid_A3
 URL:  http://192.168.4.1
 ```
 
@@ -86,8 +86,8 @@ URL:  http://192.168.4.1
 | --- | --- |
 | Short button press | Toggle Auto / Manual mode |
 | Long button press | Switch Student/P&O and Incremental Conductance |
-| Potentiometer | Set duty cycle in Manual mode |
-| Web dashboard | Set mode, duty, algorithm, and start IV sweep |
+| Slide potentiometer | Set duty cycle in Manual mode |
+| Web dashboard | Set mode, duty, algorithm, and start an I–V sweep |
 
 ## Student Workspace
 

@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 420" role="img" aria-labelledby="title desc">
+  <title id="title">EduGrid MPPT energy and information paths</title>
+  <desc id="desc">A solar panel supplies a buck converter and load along the energy path. Sensors send measurements to a microcontroller, which sends a PWM command back to the converter.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0 0L9 3 0 6Z" fill="#0065bd"/></marker>
+    <marker id="arrow-dark" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0 0L9 3 0 6Z" fill="#333"/></marker>
+  </defs>
+  <rect width="800" height="420" fill="#fff"/>
+  <style>
+    text{font-family:Arial,sans-serif;fill:#111}.title{font-size:25px;font-weight:700}.label{font-size:18px;font-weight:700}.small{font-size:14px}.box{fill:#fff;stroke:#111;stroke-width:2}.energy{fill:none;stroke:#333;stroke-width:5;marker-end:url(#arrow-dark)}.info{fill:none;stroke:#0065bd;stroke-width:4;stroke-dasharray:9 7;marker-end:url(#arrow)}
+  </style>
+  <text class="title" x="400" y="38" text-anchor="middle">Two paths meet at the converter</text>
+  <text class="label" x="36" y="91">Energy path</text>
+  <rect class="box" x="35" y="120" width="160" height="92" rx="6"/>
+  <g stroke="#0065bd" stroke-width="2" fill="none"><rect x="72" y="139" width="84" height="48"/><path d="M100 139v48M128 139v48M72 163h84"/></g>
+  <text class="label" x="115" y="204" text-anchor="middle">PV panel</text>
+  <path class="energy" d="M195 166H310"/>
+  <rect class="box" x="320" y="120" width="160" height="92" rx="6"/>
+  <path d="M350 165h23l11-17 22 35 12-18h30" fill="none" stroke="#0065bd" stroke-width="4"/>
+  <text class="label" x="400" y="204" text-anchor="middle">Buck converter</text>
+  <path class="energy" d="M480 166H595"/>
+  <rect class="box" x="605" y="120" width="160" height="92" rx="6"/>
+  <path d="M646 166h14l8-16 16 32 16-32 16 32 8-16h14" fill="none" stroke="#0065bd" stroke-width="3"/>
+  <text class="label" x="685" y="204" text-anchor="middle">Load</text>
+  <text class="label" x="36" y="276" fill="#0065bd">Information path</text>
+  <rect class="box" x="105" y="300" width="160" height="76" rx="6"/>
+  <text class="label" x="185" y="330" text-anchor="middle">V + I sensors</text>
+  <text class="small" x="185" y="355" text-anchor="middle">measure the panel</text>
+  <rect class="box" x="400" y="300" width="210" height="76" rx="6"/>
+  <text class="label" x="505" y="330" text-anchor="middle">Microcontroller</text>
+  <text class="small" x="505" y="355" text-anchor="middle">calculate P + apply rule</text>
+  <path class="info" d="M185 300V242H400V212"/>
+  <text class="small" x="276" y="235" text-anchor="middle">measurements</text>
+  <path class="info" d="M265 338H390"/>
+  <path class="info" d="M610 338H690V242H425V212"/>
+  <text class="small" x="677" y="324" text-anchor="middle">PWM command</text>
+  <text class="small" x="400" y="405" text-anchor="middle">Solid arrows carry energy. Dashed blue arrows carry information and commands.</text>
+</svg>
