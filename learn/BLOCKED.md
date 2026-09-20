@@ -8,3 +8,8 @@
 **Tried:** Implemented all four algorithms with the approved startup and voltage threshold. Both P&O and IncCond reached 98% MPP from duties 0.02 and 0.95 in fewer than 200 steps. After the cloud edge, P&O first reached 98% after 34 updates and IncCond after 33. Both measured 0.02 steady-state duty ripple.
 **Need:** Authorize adaptive or larger steps after irradiance transients and a smaller IncCond step near MPP, or change the 3 s and strict-ripple requirements. The firmware uses one fixed 0.01 step, so either option creates an intentional simulator/firmware difference that should be documented.
 **Proceeding with:** No algorithm code committed until all T-2.2 self-checks can be satisfied honestly.
+
+## T-2.3 through T-2.6 — Remaining MS2 dependency chain
+**Blocked on:** T-2.4 consumes the T-2.2 algorithm map, T-2.5 freezes the resulting engine API, and T-2.6 migrates the dashboard to that API. T-2.3's live/simulation mismatch warning also needs the selected engine preset alongside a real hardware frame. Implementing any of these completely before resolving T-2.2 would require a temporary public contract or duplicate integration work.
+**Ready:** T-1.3 now makes `edugrid-kit` the 1.7064 W default and provides its provenance; T-1.5 now provides complete deterministic scenarios. Those prerequisites no longer block the engine.
+**Need:** Resolve T-2.2. Then implement T-2.4, the rescheduled T-1.6 noise, T-2.3 integration, T-2.5 API freeze, and T-2.6 migration in that order.
