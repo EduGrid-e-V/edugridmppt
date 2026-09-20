@@ -124,3 +124,39 @@ export function curve(params, sampleCount = 120) {
 
   return points
 }
+
+/**
+ * Scale STC panel parameters for irradiance and cell temperature.
+ *
+ * @param {PanelParameters & {alphaIsc?: number, alphaImpp?: number, betaVoc?: number, betaVmpp?: number}} params Panel values in V and A, with optional coefficients in 1/K.
+ * @param {{G: number, tCell: number}} conditions Irradiance G in W/m² and cell temperature in °C.
+ * @returns {PanelParameters} Scaled panel values in V and A.
+ */
+export function scale(params, { G, tCell }) {
+  if (G <= 0) return { voc: 0, isc: 0, vmpp: 0, impp: 0 }
+
+  const alphaIsc = params.alphaIsc ?? 0.0005
+  const alphaImpp = params.alphaImpp ?? 0.0003
+  const betaVoc = params.betaVoc ?? -0.0032
+  const betaVmpp = params.betaVmpp ?? -0.0045
+  const irradianceRatio = G / 1000
+  const temperatureDifferenceK = tCell - 25
+  const voltageIrradianceFactor = 1 + 0.085 * Math.log(Math.max(G, 1) / 1000)
+
+  return {
+    isc: params.isc * irradianceRatio * (1 + alphaIsc * temperatureDifferenceK),
+    impp: params.impp * irradianceRatio * (1 + alphaImpp * temperatureDifferenceK),
+    voc: Math.max(0, params.voc * (1 + betaVoc * temperatureDifferenceK) * voltageIrradianceFactor),
+    vmpp: Math.max(0, params.vmpp * (1 + betaVmpp * temperatureDifferenceK) * voltageIrradianceFactor),
+  }
+}
+
+/**
+ * Estimate cell temperature with the NOCT model.
+ *
+ * @param {{ambientC: number, G: number, noct?: number}} conditions Ambient temperature and NOCT in °C, irradiance G in W/m².
+ * @returns {number} Cell temperature in °C.
+ */
+export function cellTemperature({ ambientC, G, noct = 45 }) {
+  return ambientC + (noct - 20) / 800 * G
+}
