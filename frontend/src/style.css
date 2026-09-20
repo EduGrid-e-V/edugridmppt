@@ -46,6 +46,7 @@ button {
 
 .topbar,
 .intro-band,
+.preset-warning,
 .advanced-row,
 .dashboard-grid {
   width: min(1760px, 100%);
@@ -242,6 +243,52 @@ button {
   font-size: 0.84rem;
   font-weight: 700;
   line-height: 1.35;
+}
+
+.preset-picker {
+  display: grid;
+  gap: 5px;
+  margin-top: 10px;
+  color: #536170;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.preset-picker select {
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid #cfd9d5;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #17212b;
+}
+
+.preset-warning {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid #d97a54;
+  border-radius: 8px;
+  background: #fff0df;
+  color: #713f1f;
+}
+
+.preset-warning div {
+  display: grid;
+  gap: 2px;
+}
+
+.preset-warning button {
+  flex: 0 0 auto;
+  padding: 7px 11px;
+  border: 1px solid #713f1f;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #713f1f;
+  font-weight: 800;
 }
 
 .learning-points {
