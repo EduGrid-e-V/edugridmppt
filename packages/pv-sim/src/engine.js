@@ -234,6 +234,11 @@ export function createEngine({ preset = 'edugrid-kit', seed = 1, noise = 1, tick
       state.scenario = selected
       state.scenarioTimeS = 0
     },
+    /** @param {number} timeS Scenario position in s. */
+    seekScenario(timeS) {
+      if (!state.scenario) return
+      state.scenarioTimeS = Math.max(0, Math.min(state.scenario.durationS, timeS))
+    },
     /** Return 48 converter operating points in V, A, and W without changing visible duty. */
     sweep() {
       const previousDuty = state.duty
