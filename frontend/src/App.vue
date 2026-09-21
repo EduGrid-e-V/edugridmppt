@@ -56,14 +56,6 @@
               ? 'Use sunlight and cloud cover to see why the maximum power point moves.'
               : 'Watch live measurements from the board and test your control algorithm.' }}
           </p>
-          <label class="preset-picker" for="panel-preset">
-            Comparison panel
-            <select id="panel-preset" :value="selectedPresetId" @change="setPreset($event.target.value)">
-              <option v-for="preset in presets" :key="preset.id" :value="preset.id">
-                {{ presetLabel(preset) }}
-              </option>
-            </select>
-          </label>
         </div>
         <div class="learning-points" aria-label="Learning goals">
           <span>Measure V, I, P</span>
@@ -71,14 +63,6 @@
           <span>Trace the I–V curve</span>
         </div>
       </div>
-    </section>
-
-    <section v-if="showPresetMismatch" class="preset-warning" role="alert">
-      <div>
-        <strong>The simulated panel is much larger than the one on your desk.</strong>
-        <span>Selected: {{ selectedPresetLabel }}; live panel: {{ power.toFixed(2) }} W.</span>
-      </div>
-      <button @click="setPreset('edugrid-kit')">Switch to EduGrid kit</button>
     </section>
 
     <section v-if="experimentSource === 'simulation'" class="advanced-row">
@@ -108,8 +92,6 @@
         :loadVoltage="loadVoltage"
         :loadCurrent="loadCurrent"
         :loadSensor="loadSensor"
-        :presetLabel="selectedPresetLabel"
-        :presetSource="selectedPreset.source"
         @update:mode="setMode"
         @update:algorithm="setAlgorithm"
         @update:duty="setDuty"
@@ -142,7 +124,6 @@ import VICurve from './components/VICurve.vue';
 import RealtimeChart from './components/RealtimeChart.vue';
 import SimulationScene from './components/SimulationScene.vue';
 import { createSensorConnection } from './services';
-import { presets } from '@edugrid/pv-sim';
 
 const isConnected = ref(false);
 
@@ -160,7 +141,6 @@ const experimentSource = ref(import.meta.env.DEV ? 'simulation' : 'real');
 const showAdvancedSimulation = ref(false);
 const simulationSunPosition = ref(0.55);
 const simulationCloudCover = ref(0.12);
-const selectedPresetId = ref('edugrid-kit');
 
 const sweepCurveData = ref([]);
 const sweepHasRun = ref(false);
@@ -178,23 +158,6 @@ const connectionLabel = computed(() => {
   if (experimentSource.value === 'simulation') return 'Simulation';
   return isConnected.value ? 'Connected' : 'Real experiment offline';
 });
-
-const selectedPreset = computed(() => (
-  presets.find((preset) => preset.id === selectedPresetId.value) || presets[0]
-));
-const selectedPresetLabel = computed(() => presetLabel(selectedPreset.value));
-const selectedPresetPmpp = computed(() => selectedPreset.value.vmpp * selectedPreset.value.impp);
-const showPresetMismatch = computed(() => {
-  if (experimentSource.value !== 'real' || power.value <= 0) return false;
-  const ratio = selectedPresetPmpp.value / power.value;
-  return ratio > 5 || ratio < 0.2;
-});
-
-const presetLabel = (preset) => {
-  if (preset.id === 'edugrid-kit') return 'EduGrid kit (1.71 W)';
-  if (preset.id === 'roof-module-450w') return 'Real installation (not your kit)';
-  return preset.id;
-};
 
 const visibleCurveData = computed(() => {
   if (experimentSource.value === 'simulation' && showAdvancedSimulation.value) {
@@ -311,15 +274,6 @@ const setDuty = (newDuty) => {
   sendCommand('set', { duty: newDuty });
 };
 
-const setPreset = (presetId) => {
-  selectedPresetId.value = presetId;
-  if (experimentSource.value === 'simulation') {
-    sendCommand('set', { preset: presetId });
-    resetDashboardData();
-    scheduleSimulationCurveRefresh();
-  }
-};
-
 const doSweep = async () => {
   if (!connector) return;
 
@@ -413,9 +367,6 @@ const connectToSelectedSource = () => {
   }, experimentSource.value);
 
   connector.connect();
-  if (experimentSource.value === 'simulation') {
-    sendCommand('set', { preset: selectedPresetId.value });
-  }
   sendSimulationEnvironment();
   scheduleSimulationCurveRefresh();
 
