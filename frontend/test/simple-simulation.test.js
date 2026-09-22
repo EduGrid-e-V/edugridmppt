@@ -32,5 +32,6 @@ describe('SimpleSimulation', () => {
     const points = simulation.sweep();
     expect(points[0]).toMatchObject({ v: 0, i: 0.18 });
     expect(points.at(-1)).toMatchObject({ v: 13.5, i: 0 });
+    expect(simulation.maximumPower()).toBeCloseTo(Math.max(...points.map(({ p }) => p)), 3);
   });
 });

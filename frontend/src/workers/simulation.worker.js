@@ -1,11 +1,8 @@
 import { SimpleSimulation, SIMPLE_SCENARIOS } from '../simulation/SimpleSimulation.js';
 import { createBerryRuntime } from '../standalone/berry/runtime.js';
 
-let suppressTelemetry = false;
 const engine = new SimpleSimulation({
-  onFrame: (frame) => {
-    if (!suppressTelemetry) postMessage({ type: 'telemetry', payload: frame });
-  }
+  onFrame: (frame) => postMessage({ type: 'telemetry', payload: frame })
 });
 let sweepData = [];
 let berryRuntime = null;
@@ -22,13 +19,13 @@ async function loadBerryRuntime() {
   return berryRuntime;
 }
 
-function installStudent(runtime) {
-  engine.setStudentFunction((frame, duty) => runtime.step({
+function installStudent(runtime, targetEngine = engine) {
+  targetEngine.setStudentFunction((frame, duty) => runtime.step({
     PV: { voltage: frame.v, current: frame.i, power: frame.p },
     load: { voltage: frame.loadV, current: frame.loadI, power: frame.loadP, available: frame.loadSensor },
     duty
   }));
-  engine.setAlgorithm('STUDENT');
+  targetEngine.setAlgorithm('STUDENT');
 }
 
 function configure(params) {
@@ -42,21 +39,19 @@ async function benchmark(code) {
   const diagnostics = runtime.compile(code);
   if (diagnostics.some(({ severity }) => severity === 'error')) return { diagnostics, runs: [] };
   const runs = [];
-  suppressTelemetry = true;
-  try {
-    for (const scenario of SIMPLE_SCENARIOS) {
+  for (const scenario of SIMPLE_SCENARIOS) {
+      const benchmarkEngine = new SimpleSimulation({ noise: 0, onFrame: () => {} });
       runtime.compile(code);
-      engine.reset();
-      installStudent(runtime);
-      engine.setMode('AUTO');
-      engine.loadScenario(scenario.id);
+      installStudent(runtime, benchmarkEngine);
+      benchmarkEngine.setMode('AUTO');
+      benchmarkEngine.loadScenario(scenario.id);
       let energyJ = 0;
       let availableEnergyJ = 0;
       let frame;
       for (let index = 0; index < Math.ceil(scenario.durationS / 0.05); index += 1) {
-        frame = engine.tick();
+        frame = benchmarkEngine.tick();
         energyJ += frame.p * 0.05;
-        availableEnergyJ += Math.max(...engine.sweep().map(({ p }) => p)) * 0.05;
+        availableEnergyJ += benchmarkEngine.maximumPower() * 0.05;
       }
       runs.push({
         scenario: scenario.id,
@@ -65,16 +60,9 @@ async function benchmark(code) {
         capturePercent: availableEnergyJ > 0 ? 100 * energyJ / availableEnergyJ : 0,
         finalPowerW: frame?.p ?? 0
       });
-    }
-    runtime.compile(code);
-    engine.reset();
-    installStudent(runtime);
-    engine.setMode('AUTO');
-  } finally {
-    suppressTelemetry = false;
   }
-  const frame = engine.step();
-  postMessage({ type: 'telemetry', payload: frame });
+  runtime.compile(code);
+  installStudent(runtime);
   return { diagnostics, runs };
 }
 

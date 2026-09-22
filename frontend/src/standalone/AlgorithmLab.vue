@@ -26,7 +26,9 @@
           <button @click="request('pause')">Pause</button>
           <button @click="request('step')">Single Step</button>
           <button @click="reset">Reset</button>
-          <button class="benchmark" @click="benchmark">Benchmark</button>
+          <button class="benchmark" :disabled="isBenchmarking" @click="benchmark">
+            {{ isBenchmarking ? 'Benchmarking…' : 'Benchmark' }}
+          </button>
         </div>
       </div>
 
@@ -133,6 +135,7 @@ const props = defineProps({
 const code = ref(INITIAL_CODE);
 const diagnostics = ref([]);
 const benchmarkRuns = ref([]);
+const isBenchmarking = ref(false);
 const scenario = ref('');
 let compileTimer = null;
 
@@ -163,9 +166,16 @@ async function reset() {
 }
 
 async function benchmark() {
-  const result = await request('benchmark', { code: code.value });
-  diagnostics.value = result?.diagnostics ?? [];
-  benchmarkRuns.value = result?.runs ?? [];
+  isBenchmarking.value = true;
+  try {
+    const result = await request('benchmark', { code: code.value });
+    diagnostics.value = result?.diagnostics ?? [];
+    benchmarkRuns.value = result?.runs ?? [];
+  } catch (error) {
+    showError(error);
+  } finally {
+    isBenchmarking.value = false;
+  }
 }
 
 function updateEnvironment() {
@@ -197,6 +207,7 @@ textarea { width: 100%; min-height: 390px; resize: vertical; padding: 14px; bord
 .button-row { justify-content: flex-start; flex-wrap: wrap; }
 button { padding: 9px 13px; border: 1px solid #9fafaa; border-radius: 5px; background: #f8faf8; cursor: pointer; font-weight: 750; }
 button:hover { background: #e8f1ed; }
+button:disabled { cursor: wait; opacity: .7; }
 .benchmark { margin-left: auto; background: #2f7f66; color: #fff; }
 .lab-side > section, .simulation-inputs { padding: 12px; border: 1px solid #dfe6e3; border-radius: 6px; background: #f8faf8; }
 .task-note, .hints { padding: 10px 12px; border: 1px solid #cbd8d3; border-radius: 6px; background: #f4faf7; line-height: 1.5; }

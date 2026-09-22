@@ -142,6 +142,11 @@ export class SimpleSimulation {
   setAmbient(value) { this.ambientC = clamp(value, -10, 60); }
   loadScenario(id) { const scenario = SIMPLE_SCENARIOS.find((candidate) => candidate.id === id); if (!scenario) throw new RangeError(`Unknown scenario: ${id}`); this.scenario = scenario; this.scenarioTimeS = 0; }
   clearScenario() { this.scenario = null; this.scenarioTimeS = 0; }
+  maximumPower() {
+    const panel = this.panelState();
+    const normalizedVoltage = Math.pow(1 / (panel.curveShape + 1), 1 / panel.curveShape);
+    return panel.voc * panel.isc * normalizedVoltage * (1 - Math.pow(normalizedVoltage, panel.curveShape));
+  }
   sweep() {
     const panel = this.panelState();
     return Array.from({ length: 121 }, (_, index) => {

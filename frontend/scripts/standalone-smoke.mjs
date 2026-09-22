@@ -42,9 +42,12 @@ try {
   await page.getByRole('button', { name: 'Single Step', exact: true }).click();
   await page.getByRole('button', { name: 'Reset', exact: true }).click();
   await page.getByRole('heading', { name: 'Student / Berry Algorithm Lab' }).waitFor();
+  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  const chartPathBeforeBenchmark = await page.locator('.power-panel .line-path').getAttribute('d');
   await page.getByRole('button', { name: 'Benchmark', exact: true }).click();
   await page.getByRole('heading', { name: 'Benchmark', exact: true }).waitFor({ timeout: 20_000 });
   await page.getByText('Tracking score', { exact: false }).waitFor();
+  await page.waitForFunction((before) => document.querySelector('.power-panel .line-path')?.getAttribute('d') !== before, chartPathBeforeBenchmark);
 
   if (browserErrors.length) throw new Error(browserErrors.join('\n'));
   console.log('PASS file://, worker telemetry, Berry diagnostics, controls, reset, and benchmark');
