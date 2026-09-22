@@ -2,10 +2,10 @@
   <section class="algorithm-lab" aria-labelledby="algorithm-lab-title">
     <header>
       <div>
-        <p class="kicker">Standalone simulation</p>
+        <p class="kicker">{{ realHardware ? 'Real ESP32 experiment' : 'Standalone simulation' }}</p>
         <h2 id="algorithm-lab-title">Student / Berry Algorithm Lab</h2>
       </div>
-      <span class="runtime-badge">Berry 1.1.0 · Web Worker</span>
+      <span class="runtime-badge">Berry 1.1.0 · {{ realHardware ? 'ESP32' : 'Web Worker' }}</span>
     </header>
 
     <div class="lab-grid">
@@ -13,7 +13,7 @@
         <label for="berry-editor">Berry controller</label>
         <div class="task-note">
           <strong>Your task:</strong> change the converter duty cycle so that <code>PV.getPower()</code>
-          becomes as large as possible. The simulator calls <code>mppt()</code> once per MPPT step.
+          becomes as large as possible. {{ realHardware ? 'The ESP32' : 'The simulator' }} calls <code>mppt()</code> once per MPPT step.
         </div>
         <textarea
           id="berry-editor"
@@ -22,18 +22,18 @@
           @input="scheduleCompile"
         />
         <div class="button-row">
-          <button @click="run">Run</button>
-          <button @click="request('pause')">Pause</button>
-          <button @click="request('step')">Single Step</button>
+          <button @click="run">{{ realHardware ? 'Install & Run' : 'Run' }}</button>
+          <button @click="pause">Pause</button>
+          <button v-if="!realHardware" @click="request('step')">Single Step</button>
           <button @click="reset">Reset</button>
-          <button class="benchmark" :disabled="isBenchmarking" @click="benchmark">
+          <button v-if="!realHardware" class="benchmark" :disabled="isBenchmarking" @click="benchmark">
             {{ isBenchmarking ? 'Benchmarking…' : 'Benchmark' }}
           </button>
         </div>
       </div>
 
       <aside class="lab-side">
-        <div class="simulation-inputs">
+        <div v-if="!realHardware" class="simulation-inputs">
           <label>Scenario
             <select v-model="scenario" @change="updateEnvironment">
               <option value="">Live sky controls</option>
@@ -63,6 +63,9 @@
         <section class="diagnostics" aria-live="polite">
           <h3>Compile diagnostics</h3>
           <p v-if="!diagnostics.length">Waiting for the interpreter…</p>
+          <p v-if="realHardware && berryHealthy === false" class="error">
+            No healthy Berry program is currently running on the ESP32. Install a valid program; runtime errors and timeouts stop PWM at minimum duty.
+          </p>
           <p v-for="(item, index) in diagnostics" :key="index" :class="item.severity">
             {{ item.message }}
           </p>
@@ -77,7 +80,8 @@
         <details class="hints">
           <summary>Hints and controls</summary>
           <ol>
-            <li><strong>Single Step</strong> calls <code>mppt()</code> once. Watch the live API values and duty.</li>
+            <li v-if="!realHardware"><strong>Single Step</strong> calls <code>mppt()</code> once. Watch the live API values and duty.</li>
+            <li v-else><strong>Install & Run</strong> compiles this program on the ESP32, preserves the previous valid program if compilation fails, then enters Auto mode.</li>
             <li>If power increased, try another small change in the same direction.</li>
             <li>If power decreased, reverse the direction of the duty change.</li>
             <li><strong>Run</strong> repeats those steps; <strong>Pause</strong> freezes them; <strong>Reset</strong> clears Berry variables and restores the starting state.</li>
@@ -130,7 +134,9 @@ const props = defineProps({
   consoleLines: { type: Array, default: () => [] },
   voltage: { type: Number, default: 0 }, current: { type: Number, default: 0 }, power: { type: Number, default: 0 },
   loadVoltage: { type: Number, default: 0 }, loadCurrent: { type: Number, default: 0 }, loadPower: { type: Number, default: 0 },
-  duty: { type: Number, default: 0 }
+  duty: { type: Number, default: 0 },
+  realHardware: { type: Boolean, default: false },
+  berryHealthy: { type: Boolean, default: null }
 });
 const code = ref(INITIAL_CODE);
 const diagnostics = ref([]);
@@ -152,17 +158,29 @@ async function compile() {
 }
 
 function scheduleCompile() {
+  if (props.realHardware) {
+    diagnostics.value = [{ severity: 'info', message: 'Changes are not on the ESP32 yet. Select Install & Run.' }];
+    return;
+  }
   clearTimeout(compileTimer);
   compileTimer = setTimeout(() => compile().catch(showError), 180);
 }
 
 async function run() {
-  if (await compile()) await request('run');
+  if (!(await compile())) return;
+  if (props.realHardware) await request('set', { algo: 'STUDENT', mode: 'AUTO' });
+  else await request('run');
+}
+
+async function pause() {
+  if (props.realHardware) await request('set', { mode: 'MANUAL' });
+  else await request('pause');
 }
 
 async function reset() {
-  await compile();
-  await request('reset');
+  if (!(await compile())) return;
+  if (props.realHardware) await request('set', { algo: 'STUDENT', mode: 'AUTO' });
+  else await request('reset');
 }
 
 async function benchmark() {
@@ -192,7 +210,10 @@ function showError(error) {
   diagnostics.value = [{ severity: 'error', message: error instanceof Error ? error.message : String(error) }];
 }
 
-onMounted(() => compile().catch(showError));
+onMounted(() => {
+  if (!props.realHardware) compile().catch(showError);
+  else diagnostics.value = [{ severity: 'info', message: 'Select Install & Run to compile this program on the ESP32.' }];
+});
 </script>
 
 <style scoped>
@@ -225,6 +246,7 @@ code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
 .simulation-inputs input { flex: 1; }
 .diagnostics p { padding: 7px; border-radius: 4px; background: #e4f4ec; }
 .diagnostics p.error { background: #fde8e5; color: #8b3027; }
+.diagnostics p.info { background: #eef2f6; color: #46545f; }
 .benchmark-output > p { margin-top: 9px; line-height: 1.45; color: #46545f; }
 .benchmark-output dl { display: grid; gap: 8px; margin: 12px 0 0; }
 .benchmark-output dl div { padding-top: 8px; border-top: 1px solid #dfe6e3; }

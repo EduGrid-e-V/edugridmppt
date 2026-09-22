@@ -1,0 +1,8 @@
+{
+  "name": "berry-edugrid",
+  "version": "1.1.0",
+  "description": "Pinned Berry interpreter core for the EduGrid ESP32 student runtime",
+  "license": "MIT",
+  "platforms": ["espressif32"],
+  "frameworks": ["arduino"]
+}

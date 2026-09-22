@@ -4,6 +4,7 @@
 #include "input_manager.h"
 #include "mppt_alg.h"
 #include "sweep_manager.h"
+#include "berry_manager.h"
 #include <Arduino.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
@@ -30,6 +31,25 @@ static bool webManualDutyActive = false;
 static float webManualDuty = PWM_MIN_DUTY;
 static char wifiAccessPointSsid[16] = "";
 static bool captivePortalIsRunning = false;
+
+static const char *algorithmName(Algorithm algorithm) {
+    if (algorithm == ALGORITHM_INCCOND) return "INCCOND";
+    if (algorithm == ALGORITHM_BERRY) return "STUDENT";
+    return "PNO";
+}
+
+static void sendBerryJson(AsyncWebServerRequest *request, int status, bool success,
+                          const String &message, bool includeSource = false) {
+    JsonDocument document;
+    document["ok"] = success;
+    document["installed"] = isBerryProgramInstalled();
+    document["healthy"] = isBerryProgramHealthy();
+    document["diagnostic"] = message;
+    if (includeSource) document["source"] = getBerrySource();
+    String json;
+    serializeJson(document, json);
+    request->send(status, "application/json", json);
+}
 
 static void buildWiFiSsid() {
     uint8_t chipIdSuffix = (uint8_t)(ESP.getEfuseMac() & 0xFF);
@@ -94,7 +114,8 @@ void broadcastMpptData(float v, float i, float p) {
     json += "\"d\":" + String(getConverterDutyCycle(), 3) + ",";
     json += "\"pot\":" + String(readPotentiometerRaw()) + ",";
     json += "\"m\":\"" + String(mode == MODE_AUTO ? "AUTO" : "MANUAL") + "\",";
-    json += "\"algo\":\"" + String(currentAlgorithm == ALGORITHM_INCCOND ? "INCCOND" : "PNO") + "\"";
+    json += "\"algo\":\"" + String(algorithmName(currentAlgorithm)) + "\",";
+    json += "\"berryHealthy\":" + String(isBerryProgramHealthy() ? "true" : "false");
     json += "}";
     ws.textAll(json);
 }
@@ -115,6 +136,8 @@ void setWebMode(Mode requestedMode) {
 
 void setWebAlgorithm(Algorithm requestedAlgorithm) {
     currentAlgorithm = requestedAlgorithm;
+    resetMPPT();
+    if (requestedAlgorithm == ALGORITHM_BERRY) resetBerryMppt();
 }
 
 void setWebDuty(float duty) {
@@ -175,7 +198,8 @@ void setupWiFi() {
     json += "\"duty\":" + String(getConverterDutyCycle() * 100, 1) + ",";
     json += "\"pot\":" + String(readPotentiometerRaw()) + ",";
     json += "\"mode\":\"" + String(mode == MODE_AUTO ? "AUTO" : "MANUAL") + "\",";
-    json += "\"algo\":\"" + String(currentAlgorithm == ALGORITHM_INCCOND ? "INCCOND" : "PNO") + "\"";
+    json += "\"algo\":\"" + String(algorithmName(currentAlgorithm)) + "\",";
+    json += "\"berryHealthy\":" + String(isBerryProgramHealthy() ? "true" : "false");
     json += "}";
     request->send(200, "application/json", json);
   });
@@ -190,6 +214,7 @@ void setupWiFi() {
         String a = request->getParam("algo")->value();
         if (a == "INCCOND") setWebAlgorithm(ALGORITHM_INCCOND);
         else if (a == "PNO") setWebAlgorithm(ALGORITHM_PNO);
+        else if (a == "STUDENT") setWebAlgorithm(ALGORITHM_BERRY);
     }
     if (request->hasParam("duty")) {
         setWebDuty(request->getParam("duty")->value().toFloat());
@@ -205,6 +230,42 @@ void setupWiFi() {
   server.on("/api/sweepdata", HTTP_GET, [](AsyncWebServerRequest *request){
       request->send(200, "application/json", getSweepData());
   });
+
+  server.on("/api/berry", HTTP_GET, [](AsyncWebServerRequest *request){
+      sendBerryJson(request, 200, isBerryProgramHealthy(), getBerryDiagnostic(), true);
+  });
+
+  server.on("/api/berry", HTTP_DELETE, [](AsyncWebServerRequest *request){
+      disableBerryProgram();
+      if (currentAlgorithm == ALGORITHM_BERRY) currentAlgorithm = ALGORITHM_PNO;
+      sendBerryJson(request, 200, true, getBerryDiagnostic());
+  });
+
+  server.on("/api/berry", HTTP_POST,
+    [](AsyncWebServerRequest *request){
+      String *source = static_cast<String *>(request->_tempObject);
+      if (source == nullptr) {
+          sendBerryJson(request, 400, false, "Request body is empty");
+          return;
+      }
+      String diagnostic;
+      bool installed = installBerryProgram(source->c_str(), source->length(), diagnostic);
+      delete source;
+      request->_tempObject = nullptr;
+      sendBerryJson(request, installed ? 200 : 422, installed, diagnostic);
+    },
+    nullptr,
+    [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
+      if (index == 0) {
+          if (total > BERRY_SOURCE_MAX_BYTES) return;
+          request->_tempObject = new String();
+          static_cast<String *>(request->_tempObject)->reserve(total);
+      }
+      String *source = static_cast<String *>(request->_tempObject);
+      if (source != nullptr && source->length() + len <= BERRY_SOURCE_MAX_BYTES) {
+          source->concat(reinterpret_cast<const char *>(data), len);
+      }
+    });
 
   setupCaptivePortalRoutes();
   server.begin();

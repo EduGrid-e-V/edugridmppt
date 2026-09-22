@@ -15,6 +15,9 @@
 #include "config.h"
 #include "pwm_manager.h"
 #include <math.h>
+#if defined(ESP32)
+#include "berry_manager.h"
+#endif
 
 // ================= STUDENT-FRIENDLY SETTINGS =================
 const float smallDutyCycleStep = DUTY_STEP_START;
@@ -74,6 +77,10 @@ void runSelectedMpptAlgorithm(float panelVoltageVolts,
 
     if (selectedAlgorithm == ALGORITHM_INCCOND) {
         runReferenceIncrementalConductance(measurement);
+#if defined(ESP32)
+    } else if (selectedAlgorithm == ALGORITHM_BERRY) {
+        if (!runBerryMpptStep()) setConverterDutyCycle(PWM_MIN_DUTY);
+#endif
     } else if (USE_REFERENCE_PNO) {
         runReferencePerturbObserve(measurement);
     } else {

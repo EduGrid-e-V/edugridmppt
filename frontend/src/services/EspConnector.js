@@ -41,15 +41,32 @@ export default class EspConnector {
   }
 
   async sendCommand(command, params = {}) {
+    if (command === 'compile-student') {
+      const response = await fetch('/api/berry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+        body: params.code ?? ''
+      });
+      const result = await response.json();
+      return {
+        ...result,
+        diagnostics: [{ severity: result.ok ? 'success' : 'error', message: result.diagnostic }]
+      };
+    }
+
     // Construct Query String
     const query = new URLSearchParams(params).toString();
     // command is like 'sweep' or 'set'
     const url = `/api/${command}${query ? '?' + query : ''}`;
     console.log(`Sending command: ${url}`);
     try {
-        await fetch(url);
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`Command ${command} failed (${response.status})`);
+        const contentType = response.headers.get('content-type') || '';
+        return contentType.includes('application/json') ? response.json() : response.text();
     } catch(e) {
         console.error(`Command ${command} failed`, e);
+        throw e;
     }
   }
 
@@ -76,7 +93,8 @@ export default class EspConnector {
       loadSensor: Boolean(data.loadSensor),
       d: normalizeDuty(data.d ?? data.duty),
       m: data.m ?? data.mode,
-      algo: data.algo
+      algo: data.algo,
+      berryHealthy: data.berryHealthy
     };
   }
 

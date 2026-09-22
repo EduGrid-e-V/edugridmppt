@@ -146,7 +146,9 @@ void displayTelemetry(float panelPowerWatts,
  
   display.setCursor(0, 57);
   if (operatingMode == MODE_AUTO) {
-      display.print((selectedAlgorithm == ALGORITHM_PNO) ? F("Student") : F("IncCond"));
+      display.print(selectedAlgorithm == ALGORITHM_INCCOND
+          ? F("IncCond")
+          : selectedAlgorithm == ALGORITHM_BERRY ? F("Berry") : F("Student"));
   } else {
       display.print(F("MANUAL"));
   }

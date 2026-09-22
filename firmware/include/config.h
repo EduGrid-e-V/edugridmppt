@@ -37,9 +37,9 @@
 #elif defined(ARDUINO_NANO_ESP32) || defined(ARDUINO_ARDUINO_NANO_ESP32)
     // Arduino Nano ESP32 (S3) - Drop-in replacement for Nano
     // Uses the Arduino Pin Definitions to map to the correct physical location
-    #define GATE_PIN        D5
-    #define BTN_PIN         D3
-    #define POT_PIN         A7
+    #define GATE_PIN        8  /** Nano ESP32 D5 maps to ESP32-S3 GPIO8. */
+    #define BTN_PIN         6  /** Nano ESP32 D3 maps to ESP32-S3 GPIO6. */
+    #define POT_PIN         14 /** Nano ESP32 A7 maps to ESP32-S3 GPIO14. */
     #define ENABLE_WIFI_DASHBOARD 1
     
     // WiFi Settings
@@ -91,6 +91,13 @@
 #define IIN_VALID_MIN   0.0f     /** @brief Minimum valid input current. */
 #define INA_SETTLE_MS   5        /** @brief Wait time after PWM change before measuring (INA conversion time). */
 #define FIRST_KICK_STEP 0.05f    /** @brief Initial duty cycle disturbance when entering Auto mode. */
+
+// ================= ESP32 BERRY STUDENT RUNTIME =================
+#define BERRY_SOURCE_MAX_BYTES       4096U  /** @brief Maximum uploaded Berry source size. */
+#define BERRY_COMPILE_TIMEOUT_MS      250U  /** @brief Maximum compile/top-level execution time. */
+#define BERRY_STEP_TIMEOUT_MS          20U  /** @brief Maximum time for one mppt() call. */
+#define BERRY_MAX_DUTY_CHANGE        0.05f  /** @brief Maximum absolute duty change per MPPT call. */
+#define BERRY_MIN_FREE_HEAP_BYTES   32768U  /** @brief Reject activation if ESP32 heap is below this. */
 
 /** @brief Debounce time for the button in milliseconds. */
 #define BTN_DEBOUNCE_MS 30
@@ -166,5 +173,6 @@ enum Mode : uint8_t {
  */
 enum Algorithm : uint8_t {
     ALGORITHM_INCCOND = ALGO_INCCOND,
-    ALGORITHM_PNO = ALGO_PNO
+    ALGORITHM_PNO = ALGO_PNO,
+    ALGORITHM_BERRY = 2
 };

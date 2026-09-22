@@ -140,7 +140,7 @@
 
     <component
       :is="algorithmLabComponent"
-      v-if="algorithmLabComponent && experimentSource === 'simulation' && algorithm === 'STUDENT'"
+      v-if="algorithmLabComponent && algorithm === 'STUDENT'"
       class="algorithm-lab-row"
       :consoleLines="studentConsole"
       :voltage="voltage"
@@ -150,6 +150,8 @@
       :loadCurrent="loadCurrent"
       :loadPower="loadPower"
       :duty="duty"
+      :realHardware="experimentSource === 'real'"
+      :berryHealthy="berryHealthy"
       @command="sendLabCommand"
     />
   </main>
@@ -179,16 +181,17 @@ const algorithm = ref('PNO');
 const experimentSource = ref(__EDUGRID_STANDALONE__ || import.meta.env.DEV ? 'simulation' : 'real');
 const algorithmLabComponent = shallowRef(null);
 const studentConsole = ref([]);
-const algorithmOptions = __EDUGRID_STANDALONE__
-  ? [
-      { id: 'PNO', label: 'Perturb & Observe' },
-      { id: 'INCCOND', label: 'Incremental Conductance' },
-      { id: 'STUDENT', label: 'Student / Berry' }
-    ]
-  : [
-      { id: 'PNO', label: 'Perturb & Observe' },
-      { id: 'INCCOND', label: 'Incremental Conductance' }
-    ];
+const berryHealthy = ref(null);
+const algorithmOptions = computed(() => {
+  const options = [
+    { id: 'PNO', label: 'Perturb & Observe' },
+    { id: 'INCCOND', label: 'Incremental Conductance' }
+  ];
+  if (__EDUGRID_STANDALONE__ || experimentSource.value === 'real') {
+    options.push({ id: 'STUDENT', label: 'Student / Berry' });
+  }
+  return options;
+});
 const showAdvancedSimulation = ref(false);
 const simulationSunPosition = ref(0.55);
 const simulationCloudCover = ref(0.12);
@@ -244,6 +247,7 @@ const resetDashboardData = () => {
   loadCurrent.value = 0;
   loadPower.value = 0;
   loadSensor.value = false;
+  berryHealthy.value = null;
   sweepCurveData.value = [];
   sweepHasRun.value = false;
   powerChartData.value = [[], []];
@@ -277,6 +281,8 @@ const handleData = (data) => {
   if (data.algo) {
     algorithm.value = data.algo;
   }
+
+  if (typeof data.berryHealthy === 'boolean') berryHealthy.value = data.berryHealthy;
 
   if (data.d !== null && data.d !== undefined) {
     const incomingDuty = Math.max(0, Math.min(0.95, Number(data.d)));
@@ -482,11 +488,9 @@ const setExperimentSource = (source) => {
 };
 
 onMounted(() => {
-  if (__EDUGRID_STANDALONE__) {
-    import('./standalone/AlgorithmLab.vue').then(({ default: component }) => {
-      algorithmLabComponent.value = component;
-    });
-  }
+  import('./standalone/AlgorithmLab.vue').then(({ default: component }) => {
+    algorithmLabComponent.value = component;
+  });
   connectToSelectedSource();
 });
 

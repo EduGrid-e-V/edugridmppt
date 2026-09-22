@@ -14,6 +14,9 @@
 #include "display_manager.h"
 #include "input_manager.h"
 #include "mppt_alg.h"
+#if defined(ESP32)
+#include "berry_manager.h"
+#endif
 
 #if defined(ESP32) && ENABLE_WIFI_DASHBOARD
 #include "wifi_manager.h"
@@ -78,6 +81,7 @@ void setup() {
 
 #if defined(ESP32) && ENABLE_WIFI_DASHBOARD
     setupWiFi();
+    setupBerryRuntime();
     displayWiFiSsid(getWiFiSsid());
     wifiSsidDisplayStartMs = millis();
     wifiSsidDisplayIsActive = true;
@@ -173,13 +177,24 @@ static void handleButtonInput(unsigned long now) {
         clearWebManualDuty();
 #endif
     } else if (buttonEvent == BTN_LONG_PRESS) {
-        currentAlgorithm = (currentAlgorithm == ALGORITHM_INCCOND)
+#if defined(ESP32)
+        currentAlgorithm = currentAlgorithm == ALGORITHM_INCCOND
             ? ALGORITHM_PNO
-            : ALGORITHM_INCCOND;
+            : currentAlgorithm == ALGORITHM_PNO
+                ? ALGORITHM_BERRY
+                : ALGORITHM_INCCOND;
+#else
+        currentAlgorithm = (currentAlgorithm == ALGORITHM_INCCOND) ? ALGORITHM_PNO : ALGORITHM_INCCOND;
+#endif
 
         Serial.print(F("Algorithm changed to "));
-        Serial.println(currentAlgorithm == ALGORITHM_PNO ? F("Student/P&O") : F("IncCond"));
+        Serial.println(currentAlgorithm == ALGORITHM_INCCOND
+            ? F("IncCond")
+            : currentAlgorithm == ALGORITHM_BERRY ? F("Berry") : F("Student/P&O"));
         resetMPPT();
+#if defined(ESP32)
+        if (currentAlgorithm == ALGORITHM_BERRY) resetBerryMppt();
+#endif
     }
 }
 
@@ -188,6 +203,9 @@ static void handleModeChange() {
 
     if (mode == MODE_AUTO) {
         resetMPPT();
+#if defined(ESP32)
+        if (currentAlgorithm == ALGORITHM_BERRY) resetBerryMppt();
+#endif
     }
 
     previousMode = mode;

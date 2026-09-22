@@ -12,8 +12,11 @@ const firmware = filesBelow(resolve('../firmware/data'))
   .map((path) => readFileSync(path))
   .map((buffer) => buffer.toString('latin1'))
   .join('\n');
-for (const forbidden of ['berry_compile', 'Student / Berry Algorithm Lab', 'Berry 1.1.0', 'student-console']) {
-  if (firmware.includes(forbidden)) throw new Error(`Firmware build contains standalone marker: ${forbidden}`);
+for (const forbidden of ['berry_compile', 'student-console', 'data:application/wasm']) {
+  if (firmware.includes(forbidden)) throw new Error(`Firmware build contains browser Berry runtime marker: ${forbidden}`);
+}
+for (const required of ['Student / Berry Algorithm Lab', 'Install & Run', '/api/berry']) {
+  if (!firmware.includes(required)) throw new Error(`Firmware dashboard is missing ESP32 Berry UI: ${required}`);
 }
 
 const standalone = readFileSync(resolve('dist/edugrid-mppt.html'), 'utf8');
@@ -23,4 +26,4 @@ for (const required of ['berry_compile', 'Student / Berry Algorithm Lab', 'Berry
 if (/<script[^>]+src=|<link[^>]+rel=["']stylesheet/.test(standalone)) {
   throw new Error('Standalone HTML contains an external script or stylesheet');
 }
-console.log('PASS build target isolation and standalone asset inlining');
+console.log('PASS browser-WASM isolation, ESP32 Berry UI, and standalone asset inlining');
