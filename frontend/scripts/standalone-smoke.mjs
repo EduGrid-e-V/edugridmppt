@@ -26,7 +26,7 @@ try {
   const editor = page.locator('#berry-editor');
   const validProgram = await editor.inputValue();
   await editor.fill('def not_mppt()\n  return 0.5\nend');
-  await page.getByText('Define a function named mppt(v, i, p, duty)').waitFor({ timeout: 10_000 });
+  await page.getByText('Define a function named mppt()').waitFor({ timeout: 10_000 });
   await editor.fill(validProgram);
   await page.getByText('Berry program compiled successfully.').waitFor({ timeout: 10_000 });
 

@@ -91,7 +91,7 @@ const ranges = computed(() => {
   const hasAxisMaximumFloor = props.max !== undefined;
   const rawMax = hasAxisMaximumFloor
     ? Math.max(props.max, measuredMax)
-    : Math.max(10, measuredMax);
+    : Math.max(0.1, measuredMax);
   const yMax = hasAxisMaximumFloor && measuredMax <= props.max
     ? props.max
     : niceMax(rawMax * 1.15);

@@ -96,7 +96,7 @@ const plot = {
 
 const bounds = computed(() => {
   return {
-    x: niceMax(maxSeen.value.voltage * 1.12, 1),
+    x: niceMax(maxSeen.value.voltage * 1.05, 1),
     y: niceMax(maxSeen.value.current * 1.16, 0.1),
     power: niceMax(maxSeen.value.power * 1.18, 1)
   };

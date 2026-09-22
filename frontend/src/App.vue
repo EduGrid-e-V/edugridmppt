@@ -58,7 +58,7 @@
           </p>
           <label class="preset-picker" for="panel-preset">
             Comparison panel
-            <select id="panel-preset" :value="selectedPresetId" @change="setPreset($event.target.value)">
+            <select id="panel-preset" :value="selectedPresetId" :disabled="experimentSource === 'simulation'" @change="setPreset($event.target.value)">
               <option v-for="preset in presets" :key="preset.id" :value="preset.id">
                 {{ presetLabel(preset) }}
               </option>
@@ -110,7 +110,7 @@
         :loadSensor="loadSensor"
         :algorithmOptions="algorithmOptions"
         :presetLabel="selectedPresetLabel"
-        :presetSource="selectedPreset.source"
+        :presetSource="displayedPresetSource"
         @update:mode="setMode"
         @update:algorithm="setAlgorithm"
         @update:duty="setDuty"
@@ -139,6 +139,13 @@
       v-if="algorithmLabComponent && experimentSource === 'simulation' && algorithm === 'STUDENT'"
       class="algorithm-lab-row"
       :consoleLines="studentConsole"
+      :voltage="voltage"
+      :current="current"
+      :power="power"
+      :loadVoltage="loadVoltage"
+      :loadCurrent="loadCurrent"
+      :loadPower="loadPower"
+      :duty="duty"
       @command="sendLabCommand"
     />
   </main>
@@ -202,6 +209,9 @@ const connectionLabel = computed(() => {
 
 const selectedPreset = computed(() => presets.find(({ id }) => id === selectedPresetId.value) || presets[0]);
 const selectedPresetLabel = computed(() => presetLabel(selectedPreset.value));
+const displayedPresetSource = computed(() => experimentSource.value === 'simulation'
+  ? 'Simple real-kit simulation: 13.5 V, 0.18 A, approximately 2 W'
+  : selectedPreset.value.source);
 const selectedPresetPmpp = computed(() => selectedPreset.value.vmpp * selectedPreset.value.impp);
 const showPresetMismatch = computed(() => {
   if (experimentSource.value !== 'real' || power.value <= 0) return false;
@@ -210,13 +220,13 @@ const showPresetMismatch = computed(() => {
 });
 
 const presetLabel = (preset) => {
-  if (preset.id === 'edugrid-kit') return 'EduGrid kit (1.71 W)';
+  if (preset.id === 'edugrid-kit') return 'EduGrid kit (~2 W)';
   if (preset.id === 'roof-module-450w') return 'Real installation (not your kit)';
   return preset.id;
 };
 
 const visibleCurveData = computed(() => {
-  if (experimentSource.value === 'simulation' && showAdvancedSimulation.value) {
+  if (experimentSource.value === 'simulation') {
     return sweepCurveData.value;
   }
 

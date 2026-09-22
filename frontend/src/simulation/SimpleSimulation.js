@@ -1,0 +1,152 @@
+const DUTY_MIN = 0.02;
+const DUTY_MAX = 0.98;
+
+export const SIMPLE_SCENARIOS = [
+  { id: 'clear-day', label: 'Clear day', durationS: 120, keyframes: [{ t: 0, irradiance: 0.08 }, { t: 60, irradiance: 1 }, { t: 120, irradiance: 0.08 }] },
+  { id: 'passing-cloud', label: 'Passing cloud', durationS: 120, keyframes: [{ t: 0, irradiance: 0.9 }, { t: 40, irradiance: 0.25, step: true }, { t: 55, irradiance: 0.9, step: true }, { t: 120, irradiance: 0.9 }] },
+  { id: 'uniform-shadow', label: 'Uniform shadow (not partial shading)', durationS: 120, keyframes: [{ t: 0, irradiance: 0.9 }, { t: 60, irradiance: 0.9 }, { t: 63, irradiance: 0.4 }, { t: 120, irradiance: 0.4 }] }
+];
+
+const clamp = (value, min, max) => Math.min(max, Math.max(min, Number(value) || 0));
+
+function sampleScenario(scenario, timeS) {
+  const t = clamp(timeS, 0, scenario.durationS);
+  let left = scenario.keyframes[0];
+  let right = left;
+  for (let index = 1; index < scenario.keyframes.length; index += 1) {
+    right = scenario.keyframes[index];
+    if (t < right.t) break;
+    left = right;
+  }
+  if (left === right || t >= right.t || right.step) return left.irradiance;
+  const fraction = (t - left.t) / (right.t - left.t);
+  return left.irradiance + fraction * (right.irradiance - left.irradiance);
+}
+
+export class SimpleSimulation {
+  constructor({ onFrame = () => {}, tickMs = 50, algorithmPeriodMs = 100, noise = 0.002, seed = 1 } = {}) {
+    this.onFrame = onFrame;
+    this.tickMs = tickMs;
+    this.algorithmPeriodMs = algorithmPeriodMs;
+    this.noise = noise;
+    this.initialSeed = seed >>> 0;
+    this.timer = null;
+    this.studentFunction = null;
+    this.reset();
+  }
+
+  reset() {
+    this.pause();
+    this.timeS = 0;
+    this.duty = 0.2;
+    this.mode = 'MANUAL';
+    this.algorithm = 'PNO';
+    this.sunPosition = 0.55;
+    this.cloudCover = 0.12;
+    this.ambientC = 25;
+    this.loadOhm = 50;
+    this.scenario = null;
+    this.scenarioTimeS = 0;
+    this.algorithmElapsedMs = 0;
+    this.previous = null;
+    this.direction = 1;
+    this.randomState = this.initialSeed;
+    return this.emit(this.measure());
+  }
+
+  start() { if (this.timer === null) this.timer = setInterval(() => this.tick(), this.tickMs); }
+  pause() { if (this.timer !== null) clearInterval(this.timer); this.timer = null; }
+  random() { this.randomState = (Math.imul(this.randomState, 1664525) + 1013904223) >>> 0; return this.randomState / 4294967296; }
+
+  irradianceFactor() {
+    if (this.scenario) return sampleScenario(this.scenario, this.scenarioTimeS);
+    const sunHeight = Math.sin(Math.PI * this.sunPosition);
+    return Math.max(0.03, Math.pow(Math.max(0, sunHeight), 1.35) * (1 - 0.86 * this.cloudCover));
+  }
+
+  panelState() {
+    const irradiance = this.irradianceFactor();
+    const cellTemperatureC = this.ambientC + 31.25 * irradiance;
+    const voltageTemperatureFactor = Math.max(0.7, 1 - 0.0032 * (this.ambientC - 25));
+    return {
+      voc: 13.5 * voltageTemperatureFactor * (0.9 + 0.1 * Math.pow(irradiance, 0.2)),
+      isc: 0.18 * irradiance * (1 + 0.0005 * (this.ambientC - 25)),
+      curveShape: 20,
+      irradianceWm2: irradiance * 1000,
+      cellTemperatureC
+    };
+  }
+
+  measure(duty = this.duty, withNoise = true) {
+    const panel = this.panelState();
+    const voltage = panel.voc * (1 - clamp(duty, DUTY_MIN, DUTY_MAX));
+    return this.measureAtVoltage(voltage, panel, duty, withNoise);
+  }
+
+  measureAtVoltage(voltage, panel = this.panelState(), duty = this.duty, withNoise = false) {
+    const normalizedVoltage = panel.voc > 0 ? voltage / panel.voc : 0;
+    const current = panel.isc * (1 - Math.pow(normalizedVoltage, panel.curveShape));
+    const noiseV = withNoise ? (this.random() - 0.5) * this.noise * panel.voc : 0;
+    const noiseI = withNoise ? (this.random() - 0.5) * this.noise * panel.isc : 0;
+    const v = clamp(voltage + noiseV, 0, panel.voc);
+    const i = clamp(current + noiseI, 0, panel.isc);
+    const p = v * i;
+    const loadP = p * 0.82;
+    const loadV = Math.sqrt(loadP * this.loadOhm);
+    return { t: this.timeS, v, i, c: i, p, loadV, loadI: loadV / this.loadOhm, loadP, loadSensor: true, d: this.duty, m: this.mode, algo: this.algorithm, G: panel.irradianceWm2, tCell: panel.cellTemperatureC, preset: 'real-kit-2w', presetSource: '13.5 V, 0.18 A real-kit scale' };
+  }
+
+  runAlgorithm(frame) {
+    if (this.mode !== 'AUTO') return;
+    if (this.algorithm === 'STUDENT') {
+      if (typeof this.studentFunction === 'function') {
+        try {
+          this.duty = clamp(this.studentFunction(frame, this.duty), DUTY_MIN, DUTY_MAX);
+          this.studentError = null;
+        } catch (error) {
+          this.studentError = error instanceof Error ? error.message : String(error);
+        }
+      }
+    } else if (this.algorithm === 'PNO') {
+      if (this.previous && frame.p < this.previous.p) this.direction *= -1;
+      this.duty = clamp(this.duty + this.direction * 0.01, DUTY_MIN, DUTY_MAX);
+    } else if (this.algorithm === 'INCCOND' && this.previous) {
+      const dV = frame.v - this.previous.v;
+      const dI = frame.i - this.previous.i;
+      if (Math.abs(dV) < 0.002) this.duty = clamp(this.duty + (dI < 0 ? 0.01 : dI > 0 ? -0.01 : 0), DUTY_MIN, DUTY_MAX);
+      else {
+        const distance = dI / dV + (frame.v > 0 ? frame.i / frame.v : 0);
+        this.duty = clamp(this.duty + (distance > 0 ? -0.01 : distance < 0 ? 0.01 : 0), DUTY_MIN, DUTY_MAX);
+      }
+    }
+    this.previous = frame;
+  }
+
+  tick() {
+    this.timeS += this.tickMs / 1000;
+    if (this.scenario) this.scenarioTimeS = Math.min(this.scenario.durationS, this.scenarioTimeS + this.tickMs / 1000);
+    let frame = this.measure();
+    this.algorithmElapsedMs += this.tickMs;
+    if (this.algorithmElapsedMs >= this.algorithmPeriodMs) { this.algorithmElapsedMs -= this.algorithmPeriodMs; this.runAlgorithm(frame); frame = this.measure(); }
+    return this.emit(frame);
+  }
+
+  step() { const frame = this.measure(); this.runAlgorithm(frame); return this.emit(this.measure()); }
+  emit(frame) { this.onFrame(frame); return frame; }
+  setMode(mode) { this.mode = mode; this.previous = null; }
+  setAlgorithm(algorithm) { this.algorithm = algorithm; this.previous = null; }
+  setDuty(duty) { this.duty = clamp(duty, DUTY_MIN, DUTY_MAX); this.previous = null; }
+  setStudentFunction(fn) { this.studentFunction = typeof fn === 'function' ? fn : null; this.previous = null; }
+  setSunPosition(value) { this.sunPosition = clamp(value, 0, 1); this.scenario = null; }
+  setCloudCover(value) { this.cloudCover = clamp(value, 0, 1); this.scenario = null; }
+  setAmbient(value) { this.ambientC = clamp(value, -10, 60); }
+  loadScenario(id) { const scenario = SIMPLE_SCENARIOS.find((candidate) => candidate.id === id); if (!scenario) throw new RangeError(`Unknown scenario: ${id}`); this.scenario = scenario; this.scenarioTimeS = 0; }
+  clearScenario() { this.scenario = null; this.scenarioTimeS = 0; }
+  sweep() {
+    const panel = this.panelState();
+    return Array.from({ length: 121 }, (_, index) => {
+      const voltage = panel.voc * index / 120;
+      return this.measureAtVoltage(voltage, panel, 1 - voltage / panel.voc, false);
+    });
+  }
+}

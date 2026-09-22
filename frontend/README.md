@@ -22,9 +22,10 @@ frontend/
 
 Key services:
 
-- `../packages/pv-sim` is the single authoritative PV, environment, converter, scenario, and MPPT model. Frontend code must call this package rather than reproduce its equations.
-- `src/services/MockConnector.js` is the small direct adapter used during local development; it delegates all simulation to `@edugrid/pv-sim`.
-- `src/workers/simulation.worker.js` owns the same engine plus the real Berry 1.1.0 interpreter and benchmark in the standalone build.
+- `src/simulation/SimpleSimulation.js` is the single model used by both frontend simulation paths. It represents the classroom panel as 13.5 V open circuit, 180 mA short circuit, and approximately 2 W maximum power, with a fixed 50 ohm load.
+- `src/services/MockConnector.js` is the small direct adapter used during local development; it delegates simulation to `SimpleSimulation`.
+- `src/workers/simulation.worker.js` owns the same model plus the real Berry 1.1.0 interpreter and benchmark in the standalone build.
+- `../packages/pv-sim` remains an independent, tested physics package, but is not used by this deliberately simple dashboard simulation.
 - `src/services/EspConnector.js` connects to the ESP32 using `/ws`, `/api/set`, `/api/sweep`, and `/api/sweepdata`.
 - `src/components/SimulationScene.vue` only visualizes the sky and emits environmental inputs; it is not a physical model.
 
@@ -87,6 +88,8 @@ npm run build:standalone
 The generated file is `frontend/dist/edugrid-mppt.html`. It contains its scripts, styles, worker, and Berry WebAssembly runtime inline and can be opened directly with `file://`. It is not a LittleFS artifact and must not be copied into `firmware/data`.
 
 `frontend/dist/edugrid-mppt.html` is generated output. Never edit it manually.
+
+The simulated sweep is intentionally broader than a hardware sweep: it samples the complete model curve from 0 V/short circuit through 13.5 V/open circuit. Live operation still uses the fixed 50 ohm classroom load. The deterministic “uniform shadow” scenario reduces irradiance uniformly and is not a partial-shading or multi-peak model.
 
 ## Upload To The Device
 

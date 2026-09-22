@@ -1,30 +1,27 @@
-import { createEngine } from '@edugrid/pv-sim';
+import { SimpleSimulation } from '../simulation/SimpleSimulation.js';
 
 export default class MockConnector {
   constructor(onDataCallback) {
     this.onData = onDataCallback;
-    this.engine = createEngine({
-      onFrame: (frame) => this.onData({ ...frame, c: frame.i }),
-    });
+    this.engine = new SimpleSimulation({ onFrame: onDataCallback });
   }
 
-  connect() {
-    this.engine.start();
-  }
-
-  disconnect() {
-    this.engine.pause();
-  }
+  connect() { this.engine.start(); }
+  disconnect() { this.engine.pause(); }
 
   async sendCommand(command, params = {}) {
     if (command === 'set') {
       if (params.mode) this.engine.setMode(params.mode);
-      if (params.duty !== undefined) this.engine.setDuty(Number(params.duty));
+      if (params.duty !== undefined) this.engine.setDuty(params.duty);
       if (params.algo) this.engine.setAlgorithm(params.algo);
-      if (params.preset) this.engine.setPreset(params.preset);
     } else if (command === 'simulation') {
-      if (params.sunPosition !== undefined) this.engine.setSunPosition(Number(params.sunPosition));
-      if (params.cloudCover !== undefined) this.engine.setCloudCover(Number(params.cloudCover));
+      if (params.sunPosition !== undefined) this.engine.setSunPosition(params.sunPosition);
+      if (params.cloudCover !== undefined) this.engine.setCloudCover(params.cloudCover);
+      if (params.ambientC !== undefined) this.engine.setAmbient(params.ambientC);
+      if (Object.hasOwn(params, 'scenario')) {
+        if (params.scenario) this.engine.loadScenario(params.scenario);
+        else this.engine.clearScenario();
+      }
     } else if (command === 'sweep') {
       this.onData({ event: 'sweep_done' });
     }

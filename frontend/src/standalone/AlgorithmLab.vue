@@ -11,6 +11,10 @@
     <div class="lab-grid">
       <div class="editor-column">
         <label for="berry-editor">Berry controller</label>
+        <div class="task-note">
+          <strong>Your task:</strong> change the converter duty cycle so that <code>PV.getPower()</code>
+          becomes as large as possible. The simulator calls <code>mppt()</code> once per MPPT step.
+        </div>
         <textarea
           id="berry-editor"
           v-model="code"
@@ -33,15 +37,29 @@
               <option value="">Live sky controls</option>
               <option value="clear-day">Clear day</option>
               <option value="passing-cloud">Passing cloud</option>
+              <option value="uniform-shadow">Uniform shadow</option>
             </select>
           </label>
           <label>Ambient temperature
             <span><input v-model.number="ambientC" type="range" min="-10" max="60" step="1" @input="updateEnvironment" /> {{ ambientC }} °C</span>
           </label>
-          <label>Load resistance
-            <span><input v-model.number="loadOhm" type="range" min="5" max="200" step="1" @input="updateEnvironment" /> {{ loadOhm }} Ω</span>
-          </label>
+          <p class="fixed-load"><strong>Load:</strong> fixed 50 Ω, matching the real kit.</p>
         </div>
+
+        <section class="api-guide">
+          <h3>Firmware-compatible API</h3>
+          <dl>
+            <div><dt><code>PV.getVoltage()</code></dt><dd>{{ voltage.toFixed(2) }} V</dd></div>
+            <div><dt><code>PV.getCurrent()</code></dt><dd>{{ current.toFixed(3) }} A</dd></div>
+            <div><dt><code>PV.getPower()</code></dt><dd>{{ power.toFixed(2) }} W</dd></div>
+            <div><dt><code>load.getVoltage()</code></dt><dd>{{ loadVoltage.toFixed(2) }} V</dd></div>
+            <div><dt><code>load.getCurrent()</code></dt><dd>{{ loadCurrent.toFixed(3) }} A</dd></div>
+            <div><dt><code>load.getPower()</code></dt><dd>{{ loadPower.toFixed(2) }} W</dd></div>
+            <div><dt><code>duty.get()</code></dt><dd>{{ duty.toFixed(3) }}</dd></div>
+          </dl>
+          <p><code>duty.set(0.50)</code> chooses a duty directly. <code>duty.change(-0.01)</code> changes it relative to the current value.</p>
+          <p class="important"><strong>Buck rule:</strong> increasing duty lowers panel voltage; decreasing duty raises panel voltage.</p>
+        </section>
 
         <section class="diagnostics" aria-live="polite">
           <h3>Compile diagnostics</h3>
@@ -54,7 +72,20 @@
         <section class="console-output">
           <h3>Console</h3>
           <pre>{{ consoleText }}</pre>
+          <p class="console-hint"><code>duty.change()</code> controls the simulation but prints nothing. Use <code>print(PV.getPower())</code> when you want console output.</p>
         </section>
+
+        <details class="hints">
+          <summary>Hints and controls</summary>
+          <ol>
+            <li><strong>Single Step</strong> calls <code>mppt()</code> once. Watch the live API values and duty.</li>
+            <li>If power increased, try another small change in the same direction.</li>
+            <li>If power decreased, reverse the direction of the duty change.</li>
+            <li><strong>Run</strong> repeats those steps; <strong>Pause</strong> freezes them; <strong>Reset</strong> clears Berry variables and restores the starting state.</li>
+            <li><strong>Benchmark</strong> runs the same program through every deterministic scenario and compares harvested energy.</li>
+          </ol>
+          <p><strong>Uniform shadow is not partial shading.</strong> It reduces light over the whole panel and therefore has only one power maximum. Real partial shading can create multiple maxima because of cell strings and bypass diodes.</p>
+        </details>
 
         <section v-if="benchmarkRuns.length" class="benchmark-output">
           <h3>Benchmark</h3>
@@ -72,29 +103,35 @@ import { computed, onMounted, ref } from 'vue';
 
 const emit = defineEmits(['command']);
 
-const INITIAL_CODE = `# Return the next duty cycle, clamped by the simulator to 0.02 .. 0.98.
+const INITIAL_CODE = `# This uses the same student API as firmware/src/mppt_alg.cpp.
 var previous_power = nil
 var direction = -1
 
-def mppt(voltage, current, power, duty)
+def mppt()
+  var power = PV.getPower()
   if previous_power == nil
     previous_power = power
-    return duty - 0.05
+    duty.change(-0.05)
+    return
   end
   if power < previous_power
     direction = -direction
   end
   previous_power = power
-  return duty + direction * 0.01
+  duty.change(direction * 0.01)
 end
 `;
 
-const props = defineProps({ consoleLines: { type: Array, default: () => [] } });
+const props = defineProps({
+  consoleLines: { type: Array, default: () => [] },
+  voltage: { type: Number, default: 0 }, current: { type: Number, default: 0 }, power: { type: Number, default: 0 },
+  loadVoltage: { type: Number, default: 0 }, loadCurrent: { type: Number, default: 0 }, loadPower: { type: Number, default: 0 },
+  duty: { type: Number, default: 0 }
+});
 const code = ref(INITIAL_CODE);
 const diagnostics = ref([]);
 const benchmarkRuns = ref([]);
 const ambientC = ref(25);
-const loadOhm = ref(50);
 const scenario = ref('');
 let compileTimer = null;
 
@@ -133,7 +170,6 @@ async function benchmark() {
 function updateEnvironment() {
   request('simulation', {
     ambientC: ambientC.value,
-    loadOhm: loadOhm.value,
     scenario: scenario.value,
   }).catch(showError);
 }
@@ -159,6 +195,16 @@ button { padding: 9px 13px; border: 1px solid #9fafaa; border-radius: 5px; backg
 button:hover { background: #e8f1ed; }
 .benchmark { margin-left: auto; background: #2f7f66; color: #fff; }
 .lab-side > section, .simulation-inputs { padding: 12px; border: 1px solid #dfe6e3; border-radius: 6px; background: #f8faf8; }
+.task-note, .hints { padding: 10px 12px; border: 1px solid #cbd8d3; border-radius: 6px; background: #f4faf7; line-height: 1.5; }
+.api-guide dl { display: grid; gap: 5px; margin: 10px 0; }
+.api-guide dl div { display: flex; justify-content: space-between; gap: 12px; }
+.api-guide dd { margin: 0; font-variant-numeric: tabular-nums; }
+.api-guide p, .console-hint, .fixed-load, .hints p { margin: 8px 0 0; line-height: 1.45; }
+.important { color: #8b3027; }
+.console-hint { color: #586574; font-size: .82rem; }
+.hints summary { cursor: pointer; font-weight: 850; }
+.hints ol { padding-left: 20px; line-height: 1.5; }
+code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
 .simulation-inputs label { align-items: flex-start; flex-direction: column; }
 .simulation-inputs label span, select { width: 100%; }
 .simulation-inputs input { flex: 1; }

@@ -6,9 +6,9 @@
 - Version: 1.1.0
 - Source commit: `b5ede66721937533fbf5c286ef44a5111ea30c75`
 - Licence: MIT, reproduced in `LICENSE`
-- Generated file SHA-256: `e7bad0ee911f6956578aa47627a4b072946a43b13b02eda863631cb2194f02ae`
+- Generated file SHA-256: `1665ab94aa0984f50e7d3f63c844d1d449a274267afa5584742203403f8e0224`
 
-The checked-in `berry_bridge.c` exposes compilation, a synchronous `mppt(v, i, p, duty)` call, and error retrieval through Berry's public C API. The interpreter and `packages/pv-sim` execute synchronously in the same worker, so a student decision is applied during the current engine step.
+The checked-in `berry_bridge.c` exposes compilation, a synchronous `mppt()` call, firmware-compatible `PV`, `load`, and `duty` objects, and error retrieval through Berry's public C API. The interpreter and `SimpleSimulation` execute synchronously in the same worker, so a student decision is applied during the current simulation step.
 
 To reproduce the generated module, check out the source commit, run Berry's `make prebuild`, then compile all `src/*.c` and `default/*.c` except `default/berry.c` together with `berry_bridge.c` using Emscripten. Required flags are:
 
