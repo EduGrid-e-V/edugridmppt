@@ -16,6 +16,7 @@
           <h3 id="panel-measurements">Panel</h3>
           <span>PV input</span>
         </div>
+        <p class="preset-provenance"><strong>{{ presetLabel }}</strong> · {{ presetSource }}</p>
         <dl class="reading-list">
           <div
             v-for="reading in panelReadings"
@@ -92,8 +93,9 @@
         <div class="algo-options">
           <label for="algorithm">Algorithm</label>
           <select id="algorithm" :value="algorithm" @change="$emit('update:algorithm', $event.target.value)">
-            <option value="PNO">Perturb & Observe</option>
-            <option value="INCCOND">Incremental Conductance</option>
+            <option v-for="option in algorithmOptions" :key="option.id" :value="option.id">
+              {{ option.label }}
+            </option>
           </select>
         </div>
         <button class="action-btn sweep" @click="$emit('trigger:sweep')">
@@ -117,7 +119,16 @@ const props = defineProps({
   loadPower: Number,
   loadVoltage: Number,
   loadCurrent: Number,
-  loadSensor: Boolean
+  loadSensor: Boolean,
+  presetLabel: String,
+  presetSource: String,
+  algorithmOptions: {
+    type: Array,
+    default: () => [
+      { id: 'PNO', label: 'Perturb & Observe' },
+      { id: 'INCCOND', label: 'Incremental Conductance' }
+    ]
+  }
 })
 
 defineEmits(['update:mode', 'update:algorithm', 'update:duty', 'trigger:sweep'])
@@ -276,6 +287,13 @@ const formatLoadMeasurement = (measurementValue) => {
   font-size: 0.76rem;
   font-weight: 800;
   text-transform: uppercase;
+}
+
+.preset-provenance {
+  margin: 0;
+  color: #687483;
+  font-size: 0.72rem;
+  line-height: 1.35;
 }
 
 .reading-list {

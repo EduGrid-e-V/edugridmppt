@@ -1,0 +1,13 @@
+{
+  "name": "@edugrid/pv-sim",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "vitest run",
+    "check": "node -e \"import('./src/index.js').then(m => { if (m.VERSION !== '0.1.0') process.exit(1) })\""
+  },
+  "devDependencies": {
+    "vitest": "^5.0.1"
+  }
+}

@@ -5,7 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "npm run build:firmware",
+    "build:firmware": "EDUGRID_BUILD=firmware vite build",
+    "build:standalone": "EDUGRID_BUILD=standalone vite build",
+    "test": "vitest run",
+    "test:standalone": "node scripts/standalone-smoke.mjs",
+    "verify:builds": "node scripts/verify-builds.mjs",
+    "check": "npm test && npm run build:firmware && npm run build:standalone && npm run verify:builds && npm run test:standalone",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -14,6 +20,11 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.1",
-    "vite": "^7.2.4"
+    "@vue/test-utils": "^2.5.1",
+    "jsdom": "^27.0.1",
+    "playwright-core": "^1.63.0",
+    "vite": "^7.2.4",
+    "vite-plugin-singlefile": "^2.3.3",
+    "vitest": "^5.0.1"
   }
 }

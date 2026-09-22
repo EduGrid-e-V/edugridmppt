@@ -56,6 +56,14 @@
               ? 'Use sunlight and cloud cover to see why the maximum power point moves.'
               : 'Watch live measurements from the board and test your control algorithm.' }}
           </p>
+          <label class="preset-picker" for="panel-preset">
+            Comparison panel
+            <select id="panel-preset" :value="selectedPresetId" @change="setPreset($event.target.value)">
+              <option v-for="preset in presets" :key="preset.id" :value="preset.id">
+                {{ presetLabel(preset) }}
+              </option>
+            </select>
+          </label>
         </div>
         <div class="learning-points" aria-label="Learning goals">
           <span>Measure V, I, P</span>
@@ -63,6 +71,14 @@
           <span>Trace the I–V curve</span>
         </div>
       </div>
+    </section>
+
+    <section v-if="showPresetMismatch" class="preset-warning" role="alert">
+      <div>
+        <strong>The simulated panel is much larger than the one on your desk.</strong>
+        <span>Selected: {{ selectedPresetLabel }}; live panel: {{ power.toFixed(2) }} W.</span>
+      </div>
+      <button @click="setPreset('edugrid-kit')">Switch to EduGrid kit</button>
     </section>
 
     <section v-if="experimentSource === 'simulation'" class="advanced-row">
@@ -92,6 +108,9 @@
         :loadVoltage="loadVoltage"
         :loadCurrent="loadCurrent"
         :loadSensor="loadSensor"
+        :algorithmOptions="algorithmOptions"
+        :presetLabel="selectedPresetLabel"
+        :presetSource="selectedPreset.source"
         @update:mode="setMode"
         @update:algorithm="setAlgorithm"
         @update:duty="setDuty"
@@ -114,16 +133,25 @@
         :data="powerChartData"
       />
     </section>
+
+    <component
+      :is="algorithmLabComponent"
+      v-if="algorithmLabComponent && experimentSource === 'simulation' && algorithm === 'STUDENT'"
+      class="algorithm-lab-row"
+      :consoleLines="studentConsole"
+      @command="sendLabCommand"
+    />
   </main>
 </template>
 
 <script setup>
-import { computed, ref, onMounted, onUnmounted } from 'vue';
+import { computed, ref, onMounted, onUnmounted, shallowRef } from 'vue';
 import ControlPanel from './components/ControlPanel.vue';
 import VICurve from './components/VICurve.vue';
 import RealtimeChart from './components/RealtimeChart.vue';
 import SimulationScene from './components/SimulationScene.vue';
 import { createSensorConnection } from './services';
+import { presets } from '@edugrid/pv-sim';
 
 const isConnected = ref(false);
 
@@ -137,10 +165,23 @@ const loadSensor = ref(false);
 const duty = ref(0);
 const mode = ref('MANUAL');
 const algorithm = ref('PNO');
-const experimentSource = ref(import.meta.env.DEV ? 'simulation' : 'real');
+const experimentSource = ref(__EDUGRID_STANDALONE__ || import.meta.env.DEV ? 'simulation' : 'real');
+const algorithmLabComponent = shallowRef(null);
+const studentConsole = ref([]);
+const algorithmOptions = __EDUGRID_STANDALONE__
+  ? [
+      { id: 'PNO', label: 'Perturb & Observe' },
+      { id: 'INCCOND', label: 'Incremental Conductance' },
+      { id: 'STUDENT', label: 'Student / Berry' }
+    ]
+  : [
+      { id: 'PNO', label: 'Perturb & Observe' },
+      { id: 'INCCOND', label: 'Incremental Conductance' }
+    ];
 const showAdvancedSimulation = ref(false);
 const simulationSunPosition = ref(0.55);
 const simulationCloudCover = ref(0.12);
+const selectedPresetId = ref('edugrid-kit');
 
 const sweepCurveData = ref([]);
 const sweepHasRun = ref(false);
@@ -158,6 +199,21 @@ const connectionLabel = computed(() => {
   if (experimentSource.value === 'simulation') return 'Simulation';
   return isConnected.value ? 'Connected' : 'Real experiment offline';
 });
+
+const selectedPreset = computed(() => presets.find(({ id }) => id === selectedPresetId.value) || presets[0]);
+const selectedPresetLabel = computed(() => presetLabel(selectedPreset.value));
+const selectedPresetPmpp = computed(() => selectedPreset.value.vmpp * selectedPreset.value.impp);
+const showPresetMismatch = computed(() => {
+  if (experimentSource.value !== 'real' || power.value <= 0) return false;
+  const ratio = selectedPresetPmpp.value / power.value;
+  return ratio > 5 || ratio < 0.2;
+});
+
+const presetLabel = (preset) => {
+  if (preset.id === 'edugrid-kit') return 'EduGrid kit (1.71 W)';
+  if (preset.id === 'roof-module-450w') return 'Real installation (not your kit)';
+  return preset.id;
+};
 
 const visibleCurveData = computed(() => {
   if (experimentSource.value === 'simulation' && showAdvancedSimulation.value) {
@@ -190,6 +246,10 @@ const handleData = (data) => {
 
   if (data.event === 'sweep_done') {
     loadSweepData();
+    return;
+  }
+  if (__EDUGRID_STANDALONE__ && data.event === 'student-console') {
+    studentConsole.value = [...studentConsole.value.slice(-199), String(data.line)];
     return;
   }
 
@@ -249,6 +309,15 @@ const sendCommand = (command, payload) => {
   connector.sendCommand(command, payload);
 };
 
+const sendLabCommand = async ({ command, params, resolve, reject }) => {
+  try {
+    const result = await connector?.sendCommand(command, params);
+    resolve?.(result);
+  } catch (error) {
+    reject?.(error);
+  }
+};
+
 const sendSimulationEnvironment = () => {
   if (experimentSource.value !== 'simulation' || !connector) return;
 
@@ -272,6 +341,15 @@ const setDuty = (newDuty) => {
   duty.value = newDuty;
   lastManualDutySetAt = Date.now();
   sendCommand('set', { duty: newDuty });
+};
+
+const setPreset = (presetId) => {
+  selectedPresetId.value = presetId;
+  if (experimentSource.value === 'simulation') {
+    sendCommand('set', { preset: presetId });
+    resetDashboardData();
+    scheduleSimulationCurveRefresh();
+  }
 };
 
 const doSweep = async () => {
@@ -350,7 +428,7 @@ const toggleAdvancedSimulation = () => {
   }
 };
 
-const connectToSelectedSource = () => {
+const connectToSelectedSource = async () => {
   if (connector) {
     connector.disconnect();
     connector = null;
@@ -361,12 +439,15 @@ const connectToSelectedSource = () => {
   resetDashboardData();
   isConnected.value = experimentSource.value === 'simulation';
 
-  connector = createSensorConnection((data) => {
+  connector = await createSensorConnection((data) => {
     isConnected.value = true;
     handleData(data);
   }, experimentSource.value);
 
   connector.connect();
+  if (experimentSource.value === 'simulation') {
+    sendCommand('set', { preset: selectedPresetId.value });
+  }
   sendSimulationEnvironment();
   scheduleSimulationCurveRefresh();
 
@@ -386,6 +467,11 @@ const setExperimentSource = (source) => {
 };
 
 onMounted(() => {
+  if (__EDUGRID_STANDALONE__) {
+    import('./standalone/AlgorithmLab.vue').then(({ default: component }) => {
+      algorithmLabComponent.value = component;
+    });
+  }
   connectToSelectedSource();
 });
 

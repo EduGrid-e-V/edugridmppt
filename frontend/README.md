@@ -1,9 +1,9 @@
 # EduGrid MPPT Dashboard
 
-This is the browser dashboard for the EduGrid MPPT trainer. It is a Vue 3 + Vite app that can run in two modes:
+This is the browser dashboard for the EduGrid MPPT trainer. The same Vue source has two compile-time targets:
 
-- Development mode uses a local mock MPPT simulation, so the interface can be built and tested without hardware.
-- Production mode is served by the ESP32 from LittleFS and talks to the firmware through WebSockets and HTTP endpoints.
+- The firmware target is served by the ESP32 from LittleFS and talks to the firmware through WebSockets and HTTP endpoints.
+- The standalone target starts in simulation mode and includes the Berry Algorithm Lab in one offline HTML file.
 
 The built dashboard is intentionally self-contained. It should not rely on external CDNs because the ESP32 usually serves it from its own access point.
 
@@ -22,9 +22,11 @@ frontend/
 
 Key services:
 
-- `src/services/MockConnector.js` provides simulated voltage, current, power, duty cycle, and sweep data during local development.
+- `../packages/pv-sim` is the single authoritative PV, environment, converter, scenario, and MPPT model. Frontend code must call this package rather than reproduce its equations.
+- `src/services/MockConnector.js` is the small direct adapter used during local development; it delegates all simulation to `@edugrid/pv-sim`.
+- `src/workers/simulation.worker.js` owns the same engine plus the real Berry 1.1.0 interpreter and benchmark in the standalone build.
 - `src/services/EspConnector.js` connects to the ESP32 using `/ws`, `/api/set`, `/api/sweep`, and `/api/sweepdata`.
-- `src/services/index.js` chooses the mock connector in Vite development mode and the ESP32 connector in production builds.
+- `src/components/SimulationScene.vue` only visualizes the sky and emits environmental inputs; it is not a physical model.
 
 ## Requirements
 
@@ -58,11 +60,11 @@ In this mode the dashboard automatically uses `MockConnector`, so controls, char
 
 ## Build For The ESP32
 
-Create a production build:
+Create the small ESP32 build:
 
 ```bash
 cd frontend
-npm run build
+npm run build:firmware
 ```
 
 The Vite config writes the built files directly into:
@@ -72,6 +74,19 @@ The Vite config writes the built files directly into:
 ```
 
 That directory is the LittleFS data folder served by the ESP32 firmware. The build uses relative asset paths, so the dashboard can be served from the device without a separate web server or internet connection.
+
+This target deliberately excludes the Berry interpreter, editor, simulation worker, and benchmark runtime.
+
+## Build The Standalone Algorithm Lab
+
+```bash
+cd frontend
+npm run build:standalone
+```
+
+The generated file is `frontend/dist/edugrid-mppt.html`. It contains its scripts, styles, worker, and Berry WebAssembly runtime inline and can be opened directly with `file://`. It is not a LittleFS artifact and must not be copied into `firmware/data`.
+
+`frontend/dist/edugrid-mppt.html` is generated output. Never edit it manually.
 
 ## Upload To The Device
 
@@ -123,9 +138,10 @@ Telemetry packets are expected to include the current operating values. The fron
 ## Useful Commands
 
 ```bash
-npm run dev      # local mock dashboard
-npm run build    # production files for firmware/data
-npm run preview  # preview the production build locally
+npm run dev               # local simulation dashboard
+npm run build:firmware    # small real-board dashboard in firmware/data
+npm run build:standalone  # one offline frontend/dist/edugrid-mppt.html
+npm run check             # tests, both builds, isolation checks, file:// smoke test
 ```
 
 ## Notes
