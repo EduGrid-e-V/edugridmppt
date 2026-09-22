@@ -40,9 +40,6 @@
               <option value="uniform-shadow">Uniform shadow</option>
             </select>
           </label>
-          <label>Ambient temperature
-            <span><input v-model.number="ambientC" type="range" min="-10" max="60" step="1" @input="updateEnvironment" /> {{ ambientC }} °C</span>
-          </label>
           <p class="fixed-load"><strong>Load:</strong> fixed 50 Ω, matching the real kit.</p>
         </div>
 
@@ -89,9 +86,14 @@
 
         <section v-if="benchmarkRuns.length" class="benchmark-output">
           <h3>Benchmark</h3>
-          <p v-for="run in benchmarkRuns" :key="run.scenario">
-            {{ run.scenario }}: {{ run.energyJ.toFixed(2) }} J
-          </p>
+          <p>The simulator resets your program, then runs it for 120 simulated seconds under each repeatable weather pattern. It adds the panel power on every step; the result is energy in joules (1 J = 1 W for 1 s).</p>
+          <p><strong>Tracking score</strong> compares your harvested energy with the maximum energy the simulated panel could supply during the same weather. Higher is better. Compare scores—not raw joules—between different weather patterns.</p>
+          <dl>
+            <div v-for="run in benchmarkRuns" :key="run.scenario">
+              <dt>{{ scenarioLabel(run.scenario) }}</dt>
+              <dd><strong>{{ run.capturePercent.toFixed(1) }}%</strong> · {{ run.energyJ.toFixed(1) }} J harvested / {{ run.availableEnergyJ.toFixed(1) }} J available</dd>
+            </div>
+          </dl>
         </section>
       </aside>
     </div>
@@ -131,7 +133,6 @@ const props = defineProps({
 const code = ref(INITIAL_CODE);
 const diagnostics = ref([]);
 const benchmarkRuns = ref([]);
-const ambientC = ref(25);
 const scenario = ref('');
 let compileTimer = null;
 
@@ -169,9 +170,12 @@ async function benchmark() {
 
 function updateEnvironment() {
   request('simulation', {
-    ambientC: ambientC.value,
     scenario: scenario.value,
   }).catch(showError);
+}
+
+function scenarioLabel(id) {
+  return ({ 'clear-day': 'Clear day', 'passing-cloud': 'Passing cloud', 'uniform-shadow': 'Uniform shadow' })[id] ?? id;
 }
 
 function showError(error) {
@@ -188,7 +192,7 @@ header h2, header p, h3, .benchmark-output p { margin: 0; }
 .kicker { color: #2f7f66; font-size: .76rem; font-weight: 850; text-transform: uppercase; }
 .runtime-badge { padding: 6px 10px; border-radius: 999px; background: #e4f4ec; color: #207652; font-size: .78rem; font-weight: 800; }
 .lab-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(300px, .8fr); gap: 16px; margin-top: 16px; }
-.editor-column, .lab-side, .simulation-inputs { display: grid; gap: 10px; }
+.editor-column, .lab-side, .simulation-inputs { display: grid; gap: 10px; align-content: start; }
 textarea { width: 100%; min-height: 390px; resize: vertical; padding: 14px; border: 1px solid #9fafaa; border-radius: 6px; background: #17212b; color: #e8f1ed; font: 14px/1.55 ui-monospace, SFMono-Regular, Consolas, monospace; tab-size: 2; }
 .button-row { justify-content: flex-start; flex-wrap: wrap; }
 button { padding: 9px 13px; border: 1px solid #9fafaa; border-radius: 5px; background: #f8faf8; cursor: pointer; font-weight: 750; }
@@ -210,6 +214,11 @@ code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
 .simulation-inputs input { flex: 1; }
 .diagnostics p { padding: 7px; border-radius: 4px; background: #e4f4ec; }
 .diagnostics p.error { background: #fde8e5; color: #8b3027; }
+.benchmark-output > p { margin-top: 9px; line-height: 1.45; color: #46545f; }
+.benchmark-output dl { display: grid; gap: 8px; margin: 12px 0 0; }
+.benchmark-output dl div { padding-top: 8px; border-top: 1px solid #dfe6e3; }
+.benchmark-output dt { font-weight: 800; }
+.benchmark-output dd { margin: 3px 0 0; font-variant-numeric: tabular-nums; }
 pre { min-height: 90px; max-height: 180px; overflow: auto; white-space: pre-wrap; }
 @media (max-width: 850px) { .lab-grid { grid-template-columns: 1fr; } header { align-items: flex-start; flex-direction: column; } }
 </style>

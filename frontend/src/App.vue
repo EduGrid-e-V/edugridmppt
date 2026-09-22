@@ -31,6 +31,14 @@
             Sim
           </button>
         </div>
+        <button
+          v-if="experimentSource === 'simulation'"
+          class="advanced-toggle"
+          :aria-expanded="showAdvancedSimulation"
+          @click="toggleAdvancedSimulation"
+        >
+          {{ showAdvancedSimulation ? 'Hide simulation controls' : 'Simulation controls' }}
+        </button>
         <div class="connection-pill" :class="{ online: isConnected }">
           <span class="status-dot"></span>
           {{ connectionLabel }}
@@ -56,7 +64,7 @@
               ? 'Use sunlight and cloud cover to see why the maximum power point moves.'
               : 'Watch live measurements from the board and test your control algorithm.' }}
           </p>
-          <label class="preset-picker" for="panel-preset">
+          <label v-if="experimentSource === 'real'" class="preset-picker" for="panel-preset">
             Comparison panel
             <select id="panel-preset" :value="selectedPresetId" :disabled="experimentSource === 'simulation'" @change="setPreset($event.target.value)">
               <option v-for="preset in presets" :key="preset.id" :value="preset.id">
@@ -81,18 +89,14 @@
       <button @click="setPreset('edugrid-kit')">Switch to EduGrid kit</button>
     </section>
 
-    <section v-if="experimentSource === 'simulation'" class="advanced-row">
-      <button class="advanced-toggle" @click="toggleAdvancedSimulation">
-        {{ showAdvancedSimulation ? 'Hide advanced simulation' : 'Advanced simulation' }}
-      </button>
-    </section>
-
     <SimulationScene
       v-if="experimentSource === 'simulation' && showAdvancedSimulation"
       :sunPosition="simulationSunPosition"
       :cloudCover="simulationCloudCover"
+      :ambientC="simulationAmbientC"
       @update:sunPosition="setSimulationSunPosition"
       @update:cloudCover="setSimulationCloudCover"
+      @update:ambientC="setSimulationAmbientC"
     />
 
     <section class="dashboard-grid" aria-label="MPPT controls and graphs">
@@ -188,6 +192,7 @@ const algorithmOptions = __EDUGRID_STANDALONE__
 const showAdvancedSimulation = ref(false);
 const simulationSunPosition = ref(0.55);
 const simulationCloudCover = ref(0.12);
+const simulationAmbientC = ref(25);
 const selectedPresetId = ref('edugrid-kit');
 
 const sweepCurveData = ref([]);
@@ -225,13 +230,7 @@ const presetLabel = (preset) => {
   return preset.id;
 };
 
-const visibleCurveData = computed(() => {
-  if (experimentSource.value === 'simulation') {
-    return sweepCurveData.value;
-  }
-
-  return sweepHasRun.value ? sweepCurveData.value : [];
-});
+const visibleCurveData = computed(() => sweepHasRun.value ? sweepCurveData.value : []);
 
 const powerChartAxisMaximum = computed(() => (
   experimentSource.value === 'real' ? 2 : undefined
@@ -333,7 +332,8 @@ const sendSimulationEnvironment = () => {
 
   connector.sendCommand('simulation', {
     sunPosition: simulationSunPosition.value,
-    cloudCover: simulationCloudCover.value
+    cloudCover: simulationCloudCover.value,
+    ambientC: simulationAmbientC.value
   });
 };
 
@@ -430,10 +430,16 @@ const setSimulationCloudCover = (value) => {
   scheduleSimulationCurveRefresh();
 };
 
+const setSimulationAmbientC = (value) => {
+  simulationAmbientC.value = value;
+  sendSimulationEnvironment();
+  scheduleSimulationCurveRefresh();
+};
+
 const toggleAdvancedSimulation = () => {
   showAdvancedSimulation.value = !showAdvancedSimulation.value;
 
-  if (showAdvancedSimulation.value) {
+  if (showAdvancedSimulation.value && sweepHasRun.value) {
     scheduleSimulationCurveRefresh();
   }
 };
@@ -459,7 +465,6 @@ const connectToSelectedSource = async () => {
     sendCommand('set', { preset: selectedPresetId.value });
   }
   sendSimulationEnvironment();
-  scheduleSimulationCurveRefresh();
 
   if (connector.socket) {
     connector.socket.addEventListener('close', () => {

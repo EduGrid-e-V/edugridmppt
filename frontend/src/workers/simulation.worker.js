@@ -51,12 +51,20 @@ async function benchmark(code) {
       engine.setMode('AUTO');
       engine.loadScenario(scenario.id);
       let energyJ = 0;
+      let availableEnergyJ = 0;
       let frame;
       for (let index = 0; index < Math.ceil(scenario.durationS / 0.05); index += 1) {
         frame = engine.tick();
         energyJ += frame.p * 0.05;
+        availableEnergyJ += Math.max(...engine.sweep().map(({ p }) => p)) * 0.05;
       }
-      runs.push({ scenario: scenario.id, energyJ, finalPowerW: frame?.p ?? 0 });
+      runs.push({
+        scenario: scenario.id,
+        energyJ,
+        availableEnergyJ,
+        capturePercent: availableEnergyJ > 0 ? 100 * energyJ / availableEnergyJ : 0,
+        finalPowerW: frame?.p ?? 0
+      });
     }
     runtime.compile(code);
     engine.reset();

@@ -18,7 +18,14 @@ try {
     return Number(value) > 0;
   }, null, { timeout: 10_000 });
 
+  if (await page.locator('#panel-preset').count()) throw new Error('Obsolete panel dropdown is visible in simulation mode');
+  if (await page.locator('.sweep-path').count()) throw new Error('I-V sweep is visible before Start Sweep');
+  await page.getByRole('button', { name: 'Simulation controls' }).click();
+  await page.getByText('Ambient temperature').waitFor();
+
   await page.getByRole('button', { name: 'Auto MPPT' }).click();
+  await page.getByRole('button', { name: 'Start Sweep' }).click();
+  await page.locator('.sweep-path').waitFor({ timeout: 10_000 });
   await page.locator('#algorithm').selectOption('STUDENT');
   await page.getByRole('heading', { name: 'Student / Berry Algorithm Lab' }).waitFor();
   await page.getByText('Berry program compiled successfully.').waitFor({ timeout: 10_000 });
@@ -37,6 +44,7 @@ try {
   await page.getByRole('heading', { name: 'Student / Berry Algorithm Lab' }).waitFor();
   await page.getByRole('button', { name: 'Benchmark', exact: true }).click();
   await page.getByRole('heading', { name: 'Benchmark', exact: true }).waitFor({ timeout: 20_000 });
+  await page.getByText('Tracking score', { exact: false }).waitFor();
 
   if (browserErrors.length) throw new Error(browserErrors.join('\n'));
   console.log('PASS file://, worker telemetry, Berry diagnostics, controls, reset, and benchmark');

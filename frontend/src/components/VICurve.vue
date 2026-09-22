@@ -7,8 +7,8 @@
       </div>
       <div class="legend" aria-label="Chart legend">
         <span><i class="dot live"></i>Live point</span>
-        <span><i class="line sweep"></i>Current</span>
-        <span><i class="line power"></i>Power</span>
+        <span v-if="hasSweep"><i class="line sweep"></i>Current</span>
+        <span v-if="hasSweep"><i class="line power"></i>Power</span>
       </div>
     </header>
 
@@ -56,6 +56,10 @@
           <circle class="live-power-dot" r="5" />
         </g>
 
+        <text v-if="!hasSweep" class="sweep-prompt" :x="plot.x + plot.width / 2" :y="plot.y + plot.height / 2" text-anchor="middle">
+          Press Start Sweep to measure the full I–V curve
+        </text>
+
         <text class="axis-title x-title" :x="plot.x + plot.width / 2" y="402" text-anchor="middle">Voltage (V)</text>
         <text class="axis-title y-title" transform="translate(18 205) rotate(-90)" text-anchor="middle">
           Current (A)
@@ -84,6 +88,7 @@ const maxSeen = ref({
   power: 0
 });
 const MAX_HISTORY = 42;
+const hasSweep = computed(() => props.sweepData?.length >= 2);
 
 const plot = {
   x: 82,
@@ -141,12 +146,12 @@ const powerPath = computed(() => {
 });
 
 const historyPath = computed(() => {
-  if (history.value.length < 2) return '';
+  if (!hasSweep.value || history.value.length < 2) return '';
   return pointsToPath(history.value.map((point) => ({ x: toX(point.v), y: toY(point.i) })));
 });
 
 const powerHistoryPath = computed(() => {
-  if (history.value.length < 2) return '';
+  if (!hasSweep.value || history.value.length < 2) return '';
   return pointsToPath(history.value.map((point) => ({
     x: toX(point.v),
     y: toPowerY(point.p)
@@ -386,6 +391,12 @@ h3 {
   fill: #40505f;
   font-size: 14px;
   font-weight: 850;
+}
+
+.sweep-prompt {
+  fill: #697783;
+  font-size: 14px;
+  font-weight: 750;
 }
 
 .power-label,

@@ -24,4 +24,13 @@ describe('SimpleSimulation', () => {
     expect(simulation.loadOhm).toBe(50);
     expect('setLoad' in simulation).toBe(false);
   });
+
+  it('sweeps the complete modeled curve independently of live duty limits', () => {
+    const simulation = new SimpleSimulation({ noise: 0 });
+    simulation.setSunPosition(0.5);
+    simulation.setCloudCover(0);
+    const points = simulation.sweep();
+    expect(points[0]).toMatchObject({ v: 0, i: 0.18 });
+    expect(points.at(-1)).toMatchObject({ v: 13.5, i: 0 });
+  });
 });

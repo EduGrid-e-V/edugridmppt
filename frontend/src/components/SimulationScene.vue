@@ -84,6 +84,20 @@
           @input="$emit('update:cloudCover', Number($event.target.value))"
         />
       </label>
+
+      <label class="sim-control">
+        <span>Ambient temperature <output>{{ ambientC }} °C</output></span>
+        <input
+          type="range"
+          min="-10"
+          max="60"
+          step="1"
+          :value="ambientC"
+          @input="$emit('update:ambientC', Number($event.target.value))"
+        />
+      </label>
+
+      <p class="fixed-load"><strong>Load:</strong> fixed at 50 Ω, matching the real kit.</p>
     </div>
   </section>
 </template>
@@ -93,10 +107,11 @@ import { computed } from 'vue';
 
 const props = defineProps({
   sunPosition: { type: Number, required: true },
-  cloudCover: { type: Number, required: true }
+  cloudCover: { type: Number, required: true },
+  ambientC: { type: Number, required: true }
 });
 
-defineEmits(['update:sunPosition', 'update:cloudCover']);
+defineEmits(['update:sunPosition', 'update:cloudCover', 'update:ambientC']);
 
 const panels = [
   { x: 238, y: 142, width: 36, height: 54 },
@@ -267,9 +282,27 @@ function cellPath(panel) {
   font-weight: 850;
 }
 
+.sim-control span {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sim-control output {
+  color: #17212b;
+  font-variant-numeric: tabular-nums;
+}
+
 .sim-control input {
   width: 100%;
   accent-color: #2f7f66;
+}
+
+.fixed-load {
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid #dfe6e3;
+  color: #4d5968;
 }
 
 @media (max-width: 860px) {
