@@ -73,11 +73,60 @@ For the Nano ESP32 dashboard, also upload the filesystem image:
 pio run -e arduino_nano_esp32 -t uploadfs
 ```
 
-The board creates an open WiFi access point whose final two hexadecimal characters identify the individual board. Its OLED shows the full name for the first 15 seconds after power-up, for example:
+### Browser updates after the first USB installation
+
+The Nano ESP32 firmware contains a recovery page that does not depend on the
+dashboard filesystem. After one USB installation of this firmware, subsequent
+application and dashboard updates can be installed over the board's WiFi:
+
+1. Connect to the board's `EduGrid_XX` access point.
+2. Open `http://192.168.4.1/admin`.
+3. Sign in as `admin`. The device-specific password appears on the OLED for the
+   first 15 seconds after startup and is also printed to the Serial monitor.
+4. Upload either the application image or the LittleFS image.
+5. Keep the board powered until it restarts.
+
+Build the upload files with:
+
+```bash
+pio run -e arduino_nano_esp32
+pio run -e arduino_nano_esp32 -t buildfs
+```
+
+The files are written to:
+
+```text
+.pio/build/arduino_nano_esp32/firmware.bin
+.pio/build/arduino_nano_esp32/littlefs.bin
+```
+
+Firmware OTA writes to the inactive 3 MiB application slot. The Arduino framework
+used by this project does not enable automatic boot rollback, so keep the initial
+USB installation available until an OTA firmware has been tested on hardware. A
+filesystem upload replaces the single LittleFS partition and therefore is not
+power-failure atomic.
+The recovery page remains available if LittleFS is damaged, so a valid filesystem
+image can be uploaded again. `/student.be`, when present, is backed up to NVS and
+restored after a successful filesystem update.
+
+Before either upload starts, the firmware stops an active sweep and holds the
+converter at minimum duty. The normal control loop remains disabled until the
+upload fails or the board restarts.
+
+To use a deliberately assigned password instead of the generated device password,
+define `OTA_ADMIN_PASSWORD` as a private build flag. Do not commit a shared
+classroom password to this repository.
+
+The browser updater intentionally does not replace the bootloader or partition
+table. Changes to either still require a USB connection.
+
+The board creates an open WiFi access point whose final two hexadecimal characters identify the individual board. Its OLED shows the network and update credentials for the first 15 seconds after power-up, for example:
 
 ```text
 SSID: EduGrid_A3
 URL:  http://192.168.4.1
+Admin: admin
+Password: EduGrid-1234A3
 ```
 
 ## Controls

@@ -37,9 +37,9 @@
 #elif defined(ARDUINO_NANO_ESP32) || defined(ARDUINO_ARDUINO_NANO_ESP32)
     // Arduino Nano ESP32 (S3) - Drop-in replacement for Nano
     // Uses the Arduino Pin Definitions to map to the correct physical location
-    #define GATE_PIN        D5
-    #define BTN_PIN         D3
-    #define POT_PIN         A7
+    #define GATE_PIN        8  /** Nano ESP32 D5 maps to ESP32-S3 GPIO8. */
+    #define BTN_PIN         6  /** Nano ESP32 D3 maps to ESP32-S3 GPIO6. */
+    #define POT_PIN         14 /** Nano ESP32 A7 maps to ESP32-S3 GPIO14. */
     #define ENABLE_WIFI_DASHBOARD 1
     
     // WiFi Settings
@@ -64,6 +64,27 @@
 
 #ifndef CAPTIVE_DNS_PORT
 #define CAPTIVE_DNS_PORT 53
+#endif
+
+// ================= OTA ADMINISTRATION =================
+/** @brief Browser login name for the embedded ESP32 recovery page. */
+#ifndef OTA_ADMIN_USERNAME
+#define OTA_ADMIN_USERNAME "admin"
+#endif
+
+/**
+ * @brief Optional fixed OTA password.
+ *
+ * Leave empty to derive a unique password from the ESP32 chip ID. The generated
+ * password is displayed on the OLED during startup and printed to Serial.
+ */
+#ifndef OTA_ADMIN_PASSWORD
+#define OTA_ADMIN_PASSWORD ""
+#endif
+
+/** @brief Prefix used for a generated, device-specific OTA password. */
+#ifndef OTA_ADMIN_PASSWORD_PREFIX
+#define OTA_ADMIN_PASSWORD_PREFIX "EduGrid-"
 #endif
 
 // ================= PWM SETTINGS =================

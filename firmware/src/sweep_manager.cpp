@@ -45,6 +45,12 @@ void startSweep() {
     _lastSweepStep = millis();
 }
 
+void cancelSweep() {
+    if (!_sweeping) return;
+    _sweeping = false;
+    mode = _preSweepMode;
+}
+
 bool updateSweep() {
     if (!_sweeping) return false;
     

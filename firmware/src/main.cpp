@@ -18,6 +18,7 @@
 #if defined(ESP32) && ENABLE_WIFI_DASHBOARD
 #include "wifi_manager.h"
 #include "sweep_manager.h"
+#include "ota_manager.h"
 #endif
 
 // ================= SYSTEM STATE =================
@@ -78,7 +79,7 @@ void setup() {
 
 #if defined(ESP32) && ENABLE_WIFI_DASHBOARD
     setupWiFi();
-    displayWiFiSsid(getWiFiSsid());
+    displayWiFiCredentials(getWiFiSsid(), getOtaAdminPassword());
     wifiSsidDisplayStartMs = millis();
     wifiSsidDisplayIsActive = true;
 #endif
@@ -95,6 +96,10 @@ void loop() {
 
 #if defined(ESP32) && ENABLE_WIFI_DASHBOARD
     handleWiFi();
+    if (isOtaSafetyActive()) {
+        setConverterDutyCycle(PWM_MIN_DUTY);
+        return;
+    }
 #endif
 
     handleButtonInput(now);
