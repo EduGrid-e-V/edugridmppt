@@ -1,5 +1,9 @@
 # --- Firmware ---
 .pio
+.platformio-ci/
+.npm/
+.cache/
+/release/
 .vscode
 .DS_Store
 *.log

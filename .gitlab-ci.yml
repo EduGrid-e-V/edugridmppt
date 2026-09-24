@@ -1,0 +1,95 @@
+workflow:
+  rules:
+    - if: '$CI_COMMIT_TAG'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - when: never
+
+stages:
+  - build
+  - package
+  - deploy
+
+variables:
+  GIT_DEPTH: "0"
+  NPM_CONFIG_CACHE: "$CI_PROJECT_DIR/.npm"
+  PLATFORMIO_CORE_DIR: "$CI_PROJECT_DIR/.platformio-ci"
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+build-web:
+  stage: build
+  image: node:22-bookworm-slim
+  cache:
+    key:
+      files:
+        - frontend/package-lock.json
+    paths:
+      - .npm/
+  script:
+    - cd frontend
+    - npm ci --prefer-offline
+    - npm test
+    - npm run build:firmware
+    - npm run build:standalone
+    - npm run verify:builds
+  artifacts:
+    name: "edugrid-mppt-web-$CI_COMMIT_REF_SLUG"
+    paths:
+      - firmware/data/
+      - frontend/dist/edugrid-mppt.html
+    expire_in: 7 days
+
+package-firmware:
+  stage: package
+  image: python:3.12-bookworm
+  needs:
+    - job: build-web
+      artifacts: true
+  cache:
+    key: platformio-6.1.19
+    paths:
+      - .platformio-ci/
+      - .cache/pip/
+  before_script:
+    - apt-get update -qq
+    - apt-get install -y --no-install-recommends git
+    - python -m pip install --disable-pip-version-check "platformio==6.1.19"
+  script:
+    - git fetch origin "$CI_DEFAULT_BRANCH"
+    - |
+      if ! git merge-base --is-ancestor "$CI_COMMIT_SHA" "origin/$CI_DEFAULT_BRANCH"; then
+        echo "Refusing to package: tag $CI_COMMIT_TAG does not point to a commit on $CI_DEFAULT_BRANCH."
+        exit 1
+      fi
+    - cd firmware
+    - pio run -e nanoatmega328new
+    - pio run -e arduino_nano_esp32
+    - pio run -e arduino_nano_esp32 -t buildfs
+    - cd ..
+    - ./ci/package-firmware.sh
+  artifacts:
+    name: "edugrid-mppt-$CI_COMMIT_TAG"
+    paths:
+      - release/
+    expire_in: never
+  rules:
+    - if: '$CI_COMMIT_TAG'
+
+deploy-pages:
+  stage: deploy
+  image: alpine:3.22
+  needs:
+    - job: build-web
+      artifacts: true
+  script:
+    - mkdir -p public
+    - cp frontend/dist/edugrid-mppt.html public/index.html
+    - cp frontend/dist/edugrid-mppt.html public/edugrid-mppt.html
+  pages: true
+  artifacts:
+    paths:
+      - public/
+  environment:
+    name: gitlab-pages
+    url: $CI_PAGES_URL
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
