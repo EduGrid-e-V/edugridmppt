@@ -4,6 +4,7 @@ import { createBerryRuntime } from '../standalone/berry/runtime.js';
 const engine = new SimpleSimulation({
   onFrame: (frame) => postMessage({ type: 'telemetry', payload: frame })
 });
+const BENCHMARK_START_DUTIES = [0.02, 0.2, 0.5, 0.8, 0.98];
 let sweepData = [];
 let berryRuntime = null;
 let compiledCode = '';
@@ -40,26 +41,38 @@ async function benchmark(code) {
   if (diagnostics.some(({ severity }) => severity === 'error')) return { diagnostics, runs: [] };
   const runs = [];
   for (const scenario of SIMPLE_SCENARIOS) {
+    let energyJ = 0;
+    let availableEnergyJ = 0;
+    let worstCapturePercent = Infinity;
+    for (const startDuty of BENCHMARK_START_DUTIES) {
       const benchmarkEngine = new SimpleSimulation({ noise: 0, onFrame: () => {} });
       runtime.compile(code);
       installStudent(runtime, benchmarkEngine);
       benchmarkEngine.setMode('AUTO');
+      benchmarkEngine.setDuty(startDuty);
       benchmarkEngine.loadScenario(scenario.id);
-      let energyJ = 0;
-      let availableEnergyJ = 0;
-      let frame;
+      let trialEnergyJ = 0;
+      let trialAvailableEnergyJ = 0;
       for (let index = 0; index < Math.ceil(scenario.durationS / 0.05); index += 1) {
-        frame = benchmarkEngine.tick();
-        energyJ += frame.p * 0.05;
-        availableEnergyJ += benchmarkEngine.maximumPower() * 0.05;
+        const frame = benchmarkEngine.tick();
+        trialEnergyJ += frame.p * 0.05;
+        trialAvailableEnergyJ += benchmarkEngine.maximumPower() * 0.05;
       }
-      runs.push({
-        scenario: scenario.id,
-        energyJ,
-        availableEnergyJ,
-        capturePercent: availableEnergyJ > 0 ? 100 * energyJ / availableEnergyJ : 0,
-        finalPowerW: frame?.p ?? 0
-      });
+      energyJ += trialEnergyJ;
+      availableEnergyJ += trialAvailableEnergyJ;
+      const trialCapturePercent = trialAvailableEnergyJ > 0
+        ? 100 * trialEnergyJ / trialAvailableEnergyJ
+        : 0;
+      worstCapturePercent = Math.min(worstCapturePercent, trialCapturePercent);
+    }
+    runs.push({
+      scenario: scenario.id,
+      energyJ,
+      availableEnergyJ,
+      capturePercent: availableEnergyJ > 0 ? 100 * energyJ / availableEnergyJ : 0,
+      worstCapturePercent,
+      simulatedDurationS: scenario.durationS * BENCHMARK_START_DUTIES.length
+    });
   }
   runtime.compile(code);
   installStudent(runtime);

@@ -11,6 +11,19 @@ describe('SimpleSimulation', () => {
     expect(frame.d).toBeCloseTo(0.3, 12);
   });
 
+  it('calls the student MPPT function at 10 Hz', () => {
+    const simulation = new SimpleSimulation({ noise: 0, tickMs: 50, algorithmPeriodMs: 100 });
+    let calls = 0;
+    simulation.setStudentFunction((_frame, duty) => {
+      calls += 1;
+      return duty;
+    });
+    simulation.setAlgorithm('STUDENT');
+    simulation.setMode('AUTO');
+    for (let index = 0; index < 20; index += 1) simulation.tick();
+    expect(calls).toBe(10);
+  });
+
   it('replays scenarios deterministically', () => {
     const first = new SimpleSimulation({ noise: 0 });
     const second = new SimpleSimulation({ noise: 0 });

@@ -13,7 +13,8 @@
         <label for="berry-editor">Berry controller</label>
         <div class="task-note">
           <strong>Your task:</strong> change the converter duty cycle so that <code>PV.getPower()</code>
-          becomes as large as possible. The simulator calls <code>mppt()</code> once per MPPT step.
+          becomes as large as possible. The simulator calls <code>mppt()</code> every 100 ms
+          (10 times per simulated second).
         </div>
         <textarea
           id="berry-editor"
@@ -34,9 +35,10 @@
         <section class="benchmark-panel" aria-labelledby="benchmark-title">
           <h3 id="benchmark-title">Benchmark</h3>
           <p>
-            Your current program is reset and run in a separate, noise-free simulation for
-            <strong>120 simulated seconds</strong> per weather pattern. Each run starts with the
-            same duty cycle and empty Berry variables, so repeated tests are directly comparable.
+            Your current program is tested in a separate, noise-free simulation for
+            <strong>600 simulated seconds per weather pattern</strong>: five independent
+            120-second trials starting at 2%, 20%, 50%, 80%, and 98% duty. Berry variables are
+            cleared before every trial, so the result also measures how reliably your code finds the MPP.
           </p>
           <ul class="benchmark-scenarios">
             <li><strong>Clear day:</strong> sunlight rises and then falls.</li>
@@ -47,7 +49,8 @@
             Harvested energy is the sum of <code>PV.getPower() × 0.05 s</code> over all steps.
             The tracking score divides it by the energy available from an ideal controller that
             remains at the maximum-power point. Compare percentages between scenarios; their raw
-            joule totals differ because they receive different amounts of light.
+            joule totals differ because they receive different amounts of light. The worst-start
+            score exposes an algorithm that works only when the initial duty is already near the MPP.
           </p>
 
           <div v-if="benchmarkRuns.length" class="benchmark-output" aria-live="polite">
@@ -55,7 +58,11 @@
             <dl>
               <div v-for="run in benchmarkRuns" :key="run.scenario">
                 <dt>{{ scenarioLabel(run.scenario) }}</dt>
-                <dd><strong>{{ run.capturePercent.toFixed(1) }}%</strong> · {{ run.energyJ.toFixed(1) }} J harvested / {{ run.availableEnergyJ.toFixed(1) }} J available</dd>
+                <dd>
+                  <strong>{{ run.capturePercent.toFixed(2) }}% overall</strong> ·
+                  {{ run.worstCapturePercent.toFixed(2) }}% worst start ·
+                  {{ run.energyJ.toFixed(1) }} J / {{ run.availableEnergyJ.toFixed(1) }} J
+                </dd>
               </div>
             </dl>
           </div>
@@ -127,21 +134,17 @@ import { computed, onMounted, ref } from 'vue';
 const emit = defineEmits(['command']);
 
 const INITIAL_CODE = `# This uses the same student API as firmware/src/mppt_alg.cpp.
-var previous_power = nil
-var direction = -1
+# mppt() is called every 100 ms. Complete the controller below.
 
 def mppt()
+  var voltage = PV.getVoltage()
+  var current = PV.getCurrent()
   var power = PV.getPower()
-  if previous_power == nil
-    previous_power = power
-    duty.change(-0.05)
-    return
-  end
-  if power < previous_power
-    direction = -direction
-  end
-  previous_power = power
-  duty.change(direction * 0.01)
+  var current_duty = duty.get()
+
+  # TODO: use the measurements to decide whether duty should change.
+  # duty.change(0.01) changes it relative to the current value.
+  # duty.set(0.50) chooses a new value directly.
 end
 `;
 

@@ -1,21 +1,15 @@
 import createBerryModule from './berry-wasm.js';
 
 export const DEFAULT_BERRY_CODE = `# Same student API as firmware/src/mppt_alg.cpp.
-var previous_power = nil
-var direction = -1
+# mppt() is called every 100 ms. Complete the controller below.
 
 def mppt()
+  var voltage = PV.getVoltage()
+  var current = PV.getCurrent()
   var power = PV.getPower()
-  if previous_power == nil
-    previous_power = power
-    duty.change(-0.05)
-    return
-  end
-  if power < previous_power
-    direction = -direction
-  end
-  previous_power = power
-  duty.change(direction * 0.01)
+  var current_duty = duty.get()
+
+  # TODO: use the measurements to decide whether duty should change.
 end
 `;
 
