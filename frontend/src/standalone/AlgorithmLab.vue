@@ -30,6 +30,36 @@
             {{ isBenchmarking ? 'Benchmarking…' : 'Benchmark' }}
           </button>
         </div>
+
+        <section class="benchmark-panel" aria-labelledby="benchmark-title">
+          <h3 id="benchmark-title">Benchmark</h3>
+          <p>
+            Your current program is reset and run in a separate, noise-free simulation for
+            <strong>120 simulated seconds</strong> per weather pattern. Each run starts with the
+            same duty cycle and empty Berry variables, so repeated tests are directly comparable.
+          </p>
+          <ul class="benchmark-scenarios">
+            <li><strong>Clear day:</strong> sunlight rises and then falls.</li>
+            <li><strong>Passing cloud:</strong> irradiance drops suddenly, then recovers.</li>
+            <li><strong>Uniform shadow:</strong> light over the whole panel fades to a lower level.</li>
+          </ul>
+          <p>
+            Harvested energy is the sum of <code>PV.getPower() × 0.05 s</code> over all steps.
+            The tracking score divides it by the energy available from an ideal controller that
+            remains at the maximum-power point. Compare percentages between scenarios; their raw
+            joule totals differ because they receive different amounts of light.
+          </p>
+
+          <div v-if="benchmarkRuns.length" class="benchmark-output" aria-live="polite">
+            <h4>Benchmark results</h4>
+            <dl>
+              <div v-for="run in benchmarkRuns" :key="run.scenario">
+                <dt>{{ scenarioLabel(run.scenario) }}</dt>
+                <dd><strong>{{ run.capturePercent.toFixed(1) }}%</strong> · {{ run.energyJ.toFixed(1) }} J harvested / {{ run.availableEnergyJ.toFixed(1) }} J available</dd>
+              </div>
+            </dl>
+          </div>
+        </section>
       </div>
 
       <aside class="lab-side">
@@ -86,17 +116,6 @@
           <p><strong>Uniform shadow is not partial shading.</strong> It reduces light over the whole panel and therefore has only one power maximum. Real partial shading can create multiple maxima because of cell strings and bypass diodes.</p>
         </details>
 
-        <section v-if="benchmarkRuns.length" class="benchmark-output">
-          <h3>Benchmark</h3>
-          <p>The simulator resets your program, then runs it for 120 simulated seconds under each repeatable weather pattern. It adds the panel power on every step; the result is energy in joules (1 J = 1 W for 1 s).</p>
-          <p><strong>Tracking score</strong> compares your harvested energy with the maximum energy the simulated panel could supply during the same weather. Higher is better. Compare scores—not raw joules—between different weather patterns.</p>
-          <dl>
-            <div v-for="run in benchmarkRuns" :key="run.scenario">
-              <dt>{{ scenarioLabel(run.scenario) }}</dt>
-              <dd><strong>{{ run.capturePercent.toFixed(1) }}%</strong> · {{ run.energyJ.toFixed(1) }} J harvested / {{ run.availableEnergyJ.toFixed(1) }} J available</dd>
-            </div>
-          </dl>
-        </section>
       </aside>
     </div>
   </section>
@@ -198,7 +217,7 @@ onMounted(() => compile().catch(showError));
 <style scoped>
 .algorithm-lab { width: min(1760px, 100%); margin: 14px auto 24px; padding: 18px; border: 1px solid #cbd8d3; border-radius: 8px; background: #fff; box-shadow: 0 14px 34px rgba(25, 39, 52, .08); }
 header, .button-row, .simulation-inputs label, .simulation-inputs label span { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-header h2, header p, h3, .benchmark-output p { margin: 0; }
+header h2, header p, h3, h4 { margin: 0; }
 .kicker { color: #2f7f66; font-size: .76rem; font-weight: 850; text-transform: uppercase; }
 .runtime-badge { padding: 6px 10px; border-radius: 999px; background: #e4f4ec; color: #207652; font-size: .78rem; font-weight: 800; }
 .lab-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(300px, .8fr); gap: 16px; margin-top: 16px; }
@@ -209,7 +228,7 @@ button { padding: 9px 13px; border: 1px solid #9fafaa; border-radius: 5px; backg
 button:hover { background: #e8f1ed; }
 button:disabled { cursor: wait; opacity: .7; }
 .benchmark { margin-left: auto; background: #2f7f66; color: #fff; }
-.lab-side > section, .simulation-inputs { padding: 12px; border: 1px solid #dfe6e3; border-radius: 6px; background: #f8faf8; }
+.lab-side > section, .simulation-inputs, .benchmark-panel { padding: 12px; border: 1px solid #dfe6e3; border-radius: 6px; background: #f8faf8; }
 .task-note, .hints { padding: 10px 12px; border: 1px solid #cbd8d3; border-radius: 6px; background: #f4faf7; line-height: 1.5; }
 .api-guide dl { display: grid; gap: 5px; margin: 10px 0; }
 .api-guide dl div { display: flex; justify-content: space-between; gap: 12px; }
@@ -225,11 +244,14 @@ code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
 .simulation-inputs input { flex: 1; }
 .diagnostics p { padding: 7px; border-radius: 4px; background: #e4f4ec; }
 .diagnostics p.error { background: #fde8e5; color: #8b3027; }
-.benchmark-output > p { margin-top: 9px; line-height: 1.45; color: #46545f; }
-.benchmark-output dl { display: grid; gap: 8px; margin: 12px 0 0; }
+.benchmark-panel > p { margin: 8px 0 0; line-height: 1.45; color: #46545f; }
+.benchmark-scenarios { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 10px 0 0; padding: 0; list-style: none; }
+.benchmark-scenarios li { padding: 8px; border-radius: 4px; background: #eef5f2; line-height: 1.35; }
+.benchmark-output { margin-top: 12px; padding-top: 12px; border-top: 2px solid #cbd8d3; }
+.benchmark-output dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 10px 0 0; }
 .benchmark-output dl div { padding-top: 8px; border-top: 1px solid #dfe6e3; }
 .benchmark-output dt { font-weight: 800; }
 .benchmark-output dd { margin: 3px 0 0; font-variant-numeric: tabular-nums; }
 pre { min-height: 90px; max-height: 180px; overflow: auto; white-space: pre-wrap; }
-@media (max-width: 850px) { .lab-grid { grid-template-columns: 1fr; } header { align-items: flex-start; flex-direction: column; } }
+@media (max-width: 850px) { .lab-grid { grid-template-columns: 1fr; } header { align-items: flex-start; flex-direction: column; } .benchmark-scenarios, .benchmark-output dl { grid-template-columns: 1fr; } }
 </style>
