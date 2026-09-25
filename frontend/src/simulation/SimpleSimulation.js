@@ -1,5 +1,6 @@
 const DUTY_MIN = 0.02;
 const DUTY_MAX = 0.98;
+const CONVERTER_EFFICIENCY = 0.82;
 
 export const SIMPLE_SCENARIOS = [
   { id: 'clear-day', label: 'Clear day', durationS: 120, keyframes: [{ t: 0, irradiance: 0.08 }, { t: 60, irradiance: 1 }, { t: 120, irradiance: 0.08 }] },
@@ -9,7 +10,7 @@ export const SIMPLE_SCENARIOS = [
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, Number(value) || 0));
 
-function sampleScenario(scenario, timeS) {
+export function sampleScenario(scenario, timeS) {
   const t = clamp(timeS, 0, scenario.durationS);
   let left = scenario.keyframes[0];
   let right = left;
@@ -21,6 +22,24 @@ function sampleScenario(scenario, timeS) {
   if (left === right || t >= right.t || right.step) return left.irradiance;
   const fraction = (t - left.t) / (right.t - left.t);
   return left.irradiance + fraction * (right.irradiance - left.irradiance);
+}
+
+function panelCurrentAtVoltage(voltage, panel) {
+  const normalizedVoltage = panel.voc > 0 ? clamp(voltage / panel.voc, 0, 1) : 0;
+  return panel.isc * (1 - Math.pow(normalizedVoltage, panel.curveShape));
+}
+
+function solveOperatingVoltage(panel, resistanceOhm) {
+  let low = 0;
+  let high = panel.voc;
+  for (let iteration = 0; iteration < 48; iteration += 1) {
+    const voltage = (low + high) / 2;
+    const panelCurrent = panelCurrentAtVoltage(voltage, panel);
+    const loadCurrent = voltage / resistanceOhm;
+    if (panelCurrent > loadCurrent) low = voltage;
+    else high = voltage;
+  }
+  return (low + high) / 2;
 }
 
 export class SimpleSimulation {
@@ -79,21 +98,22 @@ export class SimpleSimulation {
 
   measure(duty = this.duty, withNoise = true) {
     const panel = this.panelState();
-    const voltage = panel.voc * (1 - clamp(duty, DUTY_MIN, DUTY_MAX));
-    return this.measureAtVoltage(voltage, panel, duty, withNoise);
+    const safeDuty = clamp(duty, DUTY_MIN, DUTY_MAX);
+    const effectiveResistanceOhm = CONVERTER_EFFICIENCY * this.loadOhm / (safeDuty * safeDuty);
+    const voltage = solveOperatingVoltage(panel, effectiveResistanceOhm);
+    return this.measureAtVoltage(voltage, panel, safeDuty, withNoise);
   }
 
   measureAtVoltage(voltage, panel = this.panelState(), duty = this.duty, withNoise = false) {
-    const normalizedVoltage = panel.voc > 0 ? voltage / panel.voc : 0;
-    const current = panel.isc * (1 - Math.pow(normalizedVoltage, panel.curveShape));
+    const current = panelCurrentAtVoltage(voltage, panel);
     const noiseV = withNoise ? (this.random() - 0.5) * this.noise * panel.voc : 0;
     const noiseI = withNoise ? (this.random() - 0.5) * this.noise * panel.isc : 0;
     const v = clamp(voltage + noiseV, 0, panel.voc);
     const i = clamp(current + noiseI, 0, panel.isc);
     const p = v * i;
-    const loadP = p * 0.82;
+    const loadP = p * CONVERTER_EFFICIENCY;
     const loadV = Math.sqrt(loadP * this.loadOhm);
-    return { t: this.timeS, v, i, c: i, p, loadV, loadI: loadV / this.loadOhm, loadP, loadSensor: true, d: this.duty, m: this.mode, algo: this.algorithm, G: panel.irradianceWm2, tCell: panel.cellTemperatureC, preset: 'real-kit-2w', presetSource: '13.5 V, 0.18 A real-kit scale' };
+    return { t: this.timeS, v, i, c: i, p, loadV, loadI: loadV / this.loadOhm, loadP, loadSensor: true, d: duty, m: this.mode, algo: this.algorithm, G: panel.irradianceWm2, tCell: panel.cellTemperatureC, preset: 'real-kit-2w', presetSource: '13.5 V, 0.18 A real-kit scale' };
   }
 
   runAlgorithm(frame) {

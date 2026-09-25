@@ -40,11 +40,23 @@
             120-second trials starting at 2%, 20%, 50%, 80%, and 98% duty. Berry variables are
             cleared before every trial, so the result also measures how reliably your code finds the MPP.
           </p>
-          <ul class="benchmark-scenarios">
-            <li><strong>Clear day:</strong> sunlight rises and then falls.</li>
-            <li><strong>Passing cloud:</strong> irradiance drops suddenly, then recovers.</li>
-            <li><strong>Uniform shadow:</strong> light over the whole panel fades to a lower level.</li>
-          </ul>
+          <figure class="benchmark-profile-chart">
+            <svg viewBox="0 0 720 165" role="img" aria-label="Irradiance over time for the three benchmark scenarios">
+              <line class="chart-axis" x1="42" y1="10" x2="42" y2="130" />
+              <line class="chart-axis" x1="42" y1="130" x2="696" y2="130" />
+              <line class="chart-grid" x1="42" y1="70" x2="696" y2="70" />
+              <text x="8" y="15">100%</text>
+              <text x="16" y="75">50%</text>
+              <text x="24" y="134">0%</text>
+              <text x="38" y="153">0 s</text>
+              <text x="352" y="153">60 s</text>
+              <text x="670" y="153">120 s</text>
+              <polyline v-for="profile in benchmarkProfiles" :key="profile.id" :class="['scenario-line', profile.className]" :points="profile.points" />
+            </svg>
+            <figcaption>
+              <span v-for="profile in benchmarkProfiles" :key="profile.id" :class="profile.className">{{ profile.label }}</span>
+            </figcaption>
+          </figure>
           <p>
             Harvested energy is accumulated from panel power over time and shown in
             watt-hours (<strong>Wh</strong>; 1 Wh = 3600 J). The tracking score divides it by the
@@ -131,6 +143,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue';
+import { SIMPLE_SCENARIOS, sampleScenario } from '../simulation/SimpleSimulation.js';
 
 const emit = defineEmits(['command']);
 
@@ -163,6 +176,18 @@ const scenario = ref('');
 let compileTimer = null;
 
 const consoleText = computed(() => props.consoleLines.length ? props.consoleLines.join('\n') : 'Program output will appear here.');
+
+const benchmarkProfiles = SIMPLE_SCENARIOS.map((scenario, scenarioIndex) => ({
+  id: scenario.id,
+  label: scenario.label,
+  className: `scenario-${scenarioIndex + 1}`,
+  points: Array.from({ length: 121 }, (_, index) => {
+    const timeS = scenario.durationS * index / 120;
+    const x = 42 + 654 * index / 120;
+    const y = 10 + 120 * (1 - sampleScenario(scenario, timeS));
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" "),
+}));
 
 function request(command, params = {}) {
   return new Promise((resolve, reject) => emit('command', { command, params, resolve, reject }));
@@ -253,13 +278,22 @@ code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
 .diagnostics p { padding: 7px; border-radius: 4px; background: #e4f4ec; }
 .diagnostics p.error { background: #fde8e5; color: #8b3027; }
 .benchmark-panel > p { margin: 8px 0 0; line-height: 1.45; color: #46545f; }
-.benchmark-scenarios { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 10px 0 0; padding: 0; list-style: none; }
-.benchmark-scenarios li { padding: 8px; border-radius: 4px; background: #eef5f2; line-height: 1.35; }
+.benchmark-profile-chart { margin: 10px 0 0; padding: 8px; border-radius: 4px; background: white; }
+.benchmark-profile-chart svg { display: block; width: 100%; height: auto; }
+.benchmark-profile-chart text { fill: currentColor; font: 11px system-ui, sans-serif; }
+.chart-axis { stroke: currentColor; stroke-width: 1; }
+.chart-grid { stroke: currentColor; stroke-width: .5; opacity: .25; }
+.scenario-line { fill: none; stroke-width: 3; vector-effect: non-scaling-stroke; }
+.scenario-1 { color: seagreen; stroke: seagreen; }
+.scenario-2 { color: darkorange; stroke: darkorange; }
+.scenario-3 { color: slateblue; stroke: slateblue; }
+.benchmark-profile-chart figcaption { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 20px; font-weight: 750; }
+.benchmark-profile-chart figcaption span::before { content: '— '; }
 .benchmark-output { margin-top: 12px; padding-top: 12px; border-top: 2px solid #cbd8d3; }
 .benchmark-output dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 10px 0 0; }
 .benchmark-output dl div { padding-top: 8px; border-top: 1px solid #dfe6e3; }
 .benchmark-output dt { font-weight: 800; }
 .benchmark-output dd { margin: 3px 0 0; font-variant-numeric: tabular-nums; }
 pre { min-height: 90px; max-height: 180px; overflow: auto; white-space: pre-wrap; }
-@media (max-width: 850px) { .lab-grid { grid-template-columns: 1fr; } header { align-items: flex-start; flex-direction: column; } .benchmark-scenarios, .benchmark-output dl { grid-template-columns: 1fr; } }
+@media (max-width: 850px) { .lab-grid { grid-template-columns: 1fr; } header { align-items: flex-start; flex-direction: column; } .benchmark-output dl { grid-template-columns: 1fr; } }
 </style>

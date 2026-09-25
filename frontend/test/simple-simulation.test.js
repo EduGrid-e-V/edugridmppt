@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SimpleSimulation } from '../src/simulation/SimpleSimulation.js';
+import { SimpleSimulation, SIMPLE_SCENARIOS, sampleScenario } from '../src/simulation/SimpleSimulation.js';
 
 describe('SimpleSimulation', () => {
   it('applies the student duty change in the current step', () => {
@@ -22,6 +22,35 @@ describe('SimpleSimulation', () => {
     simulation.setMode('AUTO');
     for (let index = 0; index < 20; index += 1) simulation.tick();
     expect(calls).toBe(10);
+  });
+
+  it('moves the best duty as irradiance changes through the fixed load', () => {
+    const simulation = new SimpleSimulation({ noise: 0 });
+    simulation.loadScenario('passing-cloud');
+    const bestDuty = () => Array.from({ length: 97 }, (_, index) => 0.02 + index * 0.01)
+      .map((duty) => ({ duty, power: simulation.measure(duty, false).p }))
+      .reduce((best, point) => point.power > best.power ? point : best).duty;
+
+    simulation.scenarioTimeS = 20;
+    const brightDuty = bestDuty();
+    simulation.scenarioTimeS = 45;
+    const cloudDuty = bestDuty();
+    expect(brightDuty).toBeGreaterThan(cloudDuty + 0.2);
+  });
+
+  it('does not mistake a fixed 18 percent duty for full-sun MPPT', () => {
+    const simulation = new SimpleSimulation({ noise: 0 });
+    simulation.setSunPosition(0.5);
+    simulation.setCloudCover(0);
+    const capture = simulation.measure(0.18, false).p / simulation.maximumPower();
+    expect(capture).toBeLessThan(0.5);
+  });
+
+  it('samples scenario endpoints for the benchmark plot', () => {
+    const clearDay = SIMPLE_SCENARIOS.find(({ id }) => id === 'clear-day');
+    expect(sampleScenario(clearDay, 0)).toBeCloseTo(0.08, 12);
+    expect(sampleScenario(clearDay, 60)).toBeCloseTo(1, 12);
+    expect(sampleScenario(clearDay, 120)).toBeCloseTo(0.08, 12);
   });
 
   it('replays scenarios deterministically', () => {
