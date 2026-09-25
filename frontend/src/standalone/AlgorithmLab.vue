@@ -46,8 +46,9 @@
             <li><strong>Uniform shadow:</strong> light over the whole panel fades to a lower level.</li>
           </ul>
           <p>
-            Harvested energy is the sum of <code>PV.getPower() × 0.05 s</code> over all steps.
-            The tracking score divides it by the energy available from an ideal controller that
+            Harvested energy is accumulated from panel power over time and shown in
+            watt-hours (<strong>Wh</strong>; 1 Wh = 3600 J). The tracking score divides it by the
+            energy available from an ideal controller that
             remains at the maximum-power point. Compare percentages between scenarios; their raw
             joule totals differ because they receive different amounts of light. The worst-start
             score exposes an algorithm that works only when the initial duty is already near the MPP.
@@ -61,7 +62,7 @@
                 <dd>
                   <strong>{{ run.capturePercent.toFixed(2) }}% overall</strong> ·
                   {{ run.worstCapturePercent.toFixed(2) }}% worst start ·
-                  {{ run.energyJ.toFixed(1) }} J / {{ run.availableEnergyJ.toFixed(1) }} J
+                  {{ joulesToWh(run.energyJ) }} Wh / {{ joulesToWh(run.availableEnergyJ) }} Wh
                 </dd>
               </div>
             </dl>
@@ -204,6 +205,10 @@ function updateEnvironment() {
   request('simulation', {
     scenario: scenario.value,
   }).catch(showError);
+}
+
+function joulesToWh(joules) {
+  return (joules / 3600).toFixed(3);
 }
 
 function scenarioLabel(id) {
