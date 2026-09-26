@@ -29,7 +29,7 @@ try {
   await page.locator('#algorithm').selectOption('STUDENT');
   await page.getByRole('heading', { name: 'Student / Berry Algorithm Lab' }).waitFor();
   await page.locator('.benchmark-profile-chart').waitFor();
-  if (await page.locator('.benchmark-profile-chart polyline').count() !== 3) throw new Error('Benchmark scenario plot is incomplete');
+  if (await page.locator('.benchmark-profile-chart polyline').count() !== 1) throw new Error('Daylight benchmark plot is incomplete');
   await page.getByText('Berry program compiled successfully.').waitFor({ timeout: 10_000 });
 
   const editor = page.locator('#berry-editor');
@@ -50,7 +50,6 @@ try {
   const chartPathBeforeBenchmark = await page.locator('.power-panel .line-path').getAttribute('d');
   await page.getByRole('button', { name: 'Benchmark', exact: true }).click();
   await page.getByRole('heading', { name: 'Benchmark results', exact: true }).waitFor({ timeout: 20_000 });
-  await page.getByText('worst start', { exact: false }).first().waitFor();
   const fixedDutyScore = Number.parseFloat(await page.locator('.benchmark-output dd strong').first().textContent());
   if (!(fixedDutyScore < 90)) throw new Error(`Fixed 18% duty scored ${fixedDutyScore}%`);
   await page.waitForFunction((before) => document.querySelector('.power-panel .line-path')?.getAttribute('d') !== before, chartPathBeforeBenchmark);

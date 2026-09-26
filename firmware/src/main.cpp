@@ -22,6 +22,7 @@
 #include "wifi_manager.h"
 #include "sweep_manager.h"
 #include "ota_manager.h"
+#include "log_manager.h"
 #endif
 
 // ================= SYSTEM STATE =================
@@ -83,7 +84,7 @@ void setup() {
 #if defined(ESP32) && ENABLE_WIFI_DASHBOARD
     setupWiFi();
     setupBerryRuntime();
-    displayWiFiCredentials(getWiFiSsid(), getOtaAdminPassword());
+    displayWiFiAccessPoint(getWiFiSsid());
     wifiSsidDisplayStartMs = millis();
     wifiSsidDisplayIsActive = true;
 #endif
@@ -121,6 +122,10 @@ void loop() {
 
         if (sensorSettled && readSolarPanelMeasurements()) {
             sendMeasurementsToDashboard();
+#if defined(ESP32) && ENABLE_WIFI_DASHBOARD
+            recordLogSample(now, PanelVoltage, PanelCurrent, LoadVoltage, LoadCurrent,
+                            LoadSensorAvailable, getConverterDutyCycle());
+#endif
             runAutomaticOrManualControl();
         }
     }

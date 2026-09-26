@@ -76,7 +76,7 @@ The Vite config writes the built files directly into:
 
 That directory is the LittleFS data folder served by the ESP32 firmware. The build uses relative asset paths, so the dashboard can be served from the device without a separate web server or internet connection.
 
-This target includes the small Berry source editor used to install programs on the ESP32. It excludes the browser Berry/WASM interpreter, simulation worker, and benchmark runtime: real-mode Berry is executed and bounded by the firmware.
+This target includes the small Berry source editor used to install programs on the ESP32. It excludes the browser Berry/WASM interpreter, simulation worker, and benchmark runtime: real-mode Berry is executed and bounded by the firmware. In the real Berry view, CSV logging replaces the benchmark; the files are stored on the ESP32. The real dashboard header has a Downloads button that opens /downloads directly.
 
 ## Build The Standalone Algorithm Lab
 

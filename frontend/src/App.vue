@@ -31,6 +31,7 @@
             Sim
           </button>
         </div>
+        <a v-if="showDeviceDownloads" class="downloads-link" href="/downloads" aria-label="Open experiment recordings">Downloads</a>
         <button
           v-if="experimentSource === 'simulation'"
           class="advanced-toggle"
@@ -180,6 +181,7 @@ const mode = ref('MANUAL');
 const algorithm = ref('PNO');
 const experimentSource = ref(__EDUGRID_STANDALONE__ || import.meta.env.DEV ? 'simulation' : 'real');
 const algorithmLabComponent = shallowRef(null);
+const showDeviceDownloads = computed(() => !__EDUGRID_STANDALONE__ && !import.meta.env.DEV && experimentSource.value === 'real');
 const studentConsole = ref([]);
 const berryHealthy = ref(null);
 const algorithmOptions = computed(() => {
@@ -187,6 +189,10 @@ const algorithmOptions = computed(() => {
     { id: 'PNO', label: 'Perturb & Observe' },
     { id: 'INCCOND', label: 'Incremental Conductance' }
   ];
+  if (__EDUGRID_STANDALONE__) {
+    options.push({ id: 'FRACTIONAL_VOC', label: 'Fractional open-circuit voltage' });
+    options.push({ id: 'FRACTIONAL_ISC', label: 'Fractional short-circuit current' });
+  }
   if (__EDUGRID_STANDALONE__ || experimentSource.value === 'real') {
     options.push({ id: 'STUDENT', label: 'Student / Berry' });
   }

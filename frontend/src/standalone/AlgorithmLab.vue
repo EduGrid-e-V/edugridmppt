@@ -29,27 +29,53 @@
           <button v-if="!realHardware" class="benchmark" :disabled="isBenchmarking" @click="benchmark">
             {{ isBenchmarking ? 'Benchmarking…' : 'Benchmark' }}
           </button>
+          <template v-else>
+            <label class="log-interval">Every
+              <select v-model.number="loggingInterval" :disabled="logStatus.recording || loggingBusy">
+                <option :value="1">1 second</option>
+                <option :value="30">30 seconds</option>
+                <option :value="60">1 minute</option>
+                <option :value="300">5 minutes</option>
+              </select>
+            </label>
+            <button class="benchmark" :disabled="loggingBusy" @click="toggleLogging">
+              {{ logStatus.recording ? 'Stop logging' : 'Start logging' }}
+            </button>
+          </template>
         </div>
 
-        <section class="benchmark-panel" aria-labelledby="benchmark-title">
+        <section v-if="realHardware" class="logging-panel" aria-labelledby="logging-title">
+          <h3 id="logging-title">Experiment logging</h3>
+          <p>Record measured PV voltage/current, load voltage/current, and duty cycle to a CSV on the ESP32. A blank load value means its sensor was unavailable.</p>
+          <p>{{ logStatus.message || 'Choose an interval, then start logging.' }}
+            <span v-if="logStatus.recording"> Recording: {{ logStatus.active }}</span>
+          </p>
+          <p>{{ ((logStatus.usedBytes || 0) / 1048576).toFixed(2) }} / 4.00 MiB log budget used.
+            <a href="/downloads">Open recordings and download CSV files</a>.
+          </p>
+          <p class="important">A filesystem update can erase recordings. Download files you want to keep before updating.</p>
+        </section>
+
+        <section v-if="!realHardware" class="benchmark-panel" aria-labelledby="benchmark-title">
           <h3 id="benchmark-title">Benchmark</h3>
           <p>
-            Your current program is tested in a separate, noise-free simulation for
-            <strong>600 simulated seconds per weather pattern</strong>: five independent
-            120-second trials starting at 2%, 20%, 50%, 80%, and 98% duty. Berry variables are
-            cleared before every trial, so the result also measures how reliably your code finds the MPP.
+            Your current program is tested through <strong>one complete daylight period</strong>,
+            from sunrise at 06:00 to sunset at 18:00. A clear-sky daylight envelope is
+            disturbed by slow cloud banks, minute-scale cloud edges, and second-scale fluctuations.
+            The simulation starts at 20% duty and calls <code>mppt()</code> at 10 Hz, exactly
+            432,000 times during the benchmark.
           </p>
           <figure class="benchmark-profile-chart">
-            <svg viewBox="0 0 720 165" role="img" aria-label="Irradiance over time for the three benchmark scenarios">
+            <svg viewBox="0 0 720 165" role="img" aria-label="Irradiance from sunrise to sunset on a fluctuating benchmark day">
               <line class="chart-axis" x1="42" y1="10" x2="42" y2="130" />
               <line class="chart-axis" x1="42" y1="130" x2="696" y2="130" />
               <line class="chart-grid" x1="42" y1="70" x2="696" y2="70" />
               <text x="8" y="15">100%</text>
               <text x="16" y="75">50%</text>
               <text x="24" y="134">0%</text>
-              <text x="38" y="153">0 s</text>
-              <text x="352" y="153">60 s</text>
-              <text x="670" y="153">120 s</text>
+              <text x="38" y="153">06:00</text>
+              <text x="350" y="153">12:00</text>
+              <text x="663" y="153">18:00</text>
               <polyline v-for="profile in benchmarkProfiles" :key="profile.id" :class="['scenario-line', profile.className]" :points="profile.points" />
             </svg>
             <figcaption>
@@ -57,12 +83,11 @@
             </figcaption>
           </figure>
           <p>
-            Harvested energy is accumulated from panel power over time and shown in
+            Harvested energy is accumulated from panel power from sunrise to sunset and shown in
             watt-hours (<strong>Wh</strong>; 1 Wh = 3600 J). The tracking score divides it by the
-            energy available from an ideal controller that
-            remains at the maximum-power point. Compare percentages between scenarios; their raw
-            joule totals differ because they receive different amounts of light. The worst-start
-            score exposes an algorithm that works only when the initial duty is already near the MPP.
+            energy available from an ideal controller that remains at the maximum-power point.
+            A fixed duty may work during one irradiance level, but loses energy as the optimal
+            operating point moves throughout the day.
           </p>
 
           <div v-if="benchmarkRuns.length" class="benchmark-output" aria-live="polite">
@@ -71,9 +96,8 @@
               <div v-for="run in benchmarkRuns" :key="run.scenario">
                 <dt>{{ scenarioLabel(run.scenario) }}</dt>
                 <dd>
-                  <strong>{{ run.capturePercent.toFixed(2) }}% overall</strong> ·
-                  {{ run.worstCapturePercent.toFixed(2) }}% worst start ·
-                  {{ joulesToWh(run.energyJ) }} Wh / {{ joulesToWh(run.availableEnergyJ) }} Wh
+                  <strong>{{ run.capturePercent.toFixed(2) }}% of available energy</strong> ·
+                  {{ joulesToWh(run.energyJ) }} Wh harvested / {{ joulesToWh(run.availableEnergyJ) }} Wh available
                 </dd>
               </div>
             </dl>
@@ -87,8 +111,9 @@
             <select v-model="scenario" @change="updateEnvironment">
               <option value="">Live sky controls</option>
               <option value="clear-day">Clear day</option>
-              <option value="passing-cloud">Passing cloud</option>
-              <option value="uniform-shadow">Uniform shadow</option>
+              <option value="passing-cloud">Cloudy day with passing shadows</option>
+              <option value="uniform-shadow">Passing whole-panel shadows</option>
+              <option value="fluctuating-day">Synthetic cloudy PV day (06:00-18:00)</option>
             </select>
           </label>
           <p class="fixed-load"><strong>Load:</strong> fixed 50 Ω, matching the real kit.</p>
@@ -121,9 +146,12 @@
         </section>
 
         <section class="console-output">
-          <h3>Console</h3>
-          <pre>{{ consoleText }}</pre>
-          <p class="console-hint"><code>duty.change()</code> controls the simulation but prints nothing. Use <code>print(PV.getPower())</code> when you want console output.</p>
+          <div class="console-header">
+            <h3>Console</h3>
+            <label><input v-model="autoScroll" type="checkbox" /> Auto-scroll</label>
+          </div>
+          <pre ref="consoleOutput">{{ consoleText }}</pre>
+          <p class="console-hint"><code>duty.change()</code> changes duty but prints nothing. Use <code>print(PV.getPower())</code> when you want console output.</p>
         </section>
 
         <details class="hints">
@@ -134,7 +162,8 @@
             <li>If power increased, try another small change in the same direction.</li>
             <li>If power decreased, reverse the direction of the duty change.</li>
             <li><strong>Run</strong> repeats those steps; <strong>Pause</strong> freezes them; <strong>Reset</strong> clears Berry variables and restores the starting state.</li>
-            <li><strong>Benchmark</strong> runs the same program through every deterministic scenario and compares harvested energy.</li>
+            <li v-if="!realHardware"><strong>Benchmark</strong> runs the same program through every deterministic scenario and compares harvested energy.</li>
+            <li v-else><strong>Start logging</strong> records the real kit at the selected interval. Stop it before downloading the CSV.</li>
           </ol>
           <p><strong>Uniform shadow is not partial shading.</strong> It reduces light over the whole panel and therefore has only one power maximum. Real partial shading can create multiple maxima because of cell strings and bypass diodes.</p>
         </details>
@@ -145,8 +174,8 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue';
-import { SIMPLE_SCENARIOS, sampleScenario } from '../simulation/SimpleSimulation.js';
+import { computed, onMounted, ref, watch } from 'vue';
+import { BENCHMARK_SCENARIOS, SIMPLE_SCENARIOS, sampleScenario } from '../simulation/SimpleSimulation.js';
 
 const emit = defineEmits(['command']);
 
@@ -177,18 +206,29 @@ const code = ref(INITIAL_CODE);
 const diagnostics = ref([]);
 const benchmarkRuns = ref([]);
 const isBenchmarking = ref(false);
+const loggingInterval = ref(1);
+const loggingBusy = ref(false);
+const logStatus = ref({ recording: false, message: '', usedBytes: 0, active: '' });
 const scenario = ref('');
+const autoScroll = ref(true);
+const consoleOutput = ref(null);
 let compileTimer = null;
 
 const consoleText = computed(() => props.consoleLines.length ? props.consoleLines.join('\n') : 'Program output will appear here.');
 
-const benchmarkProfiles = SIMPLE_SCENARIOS.map((scenario, scenarioIndex) => ({
+watch([() => props.consoleLines, autoScroll], () => {
+  if (autoScroll.value && consoleOutput.value) {
+    consoleOutput.value.scrollTop = consoleOutput.value.scrollHeight;
+  }
+}, { flush: 'post' });
+
+const benchmarkProfiles = BENCHMARK_SCENARIOS.map((scenario, scenarioIndex) => ({
   id: scenario.id,
   label: scenario.label,
   className: `scenario-${scenarioIndex + 1}`,
-  points: Array.from({ length: 121 }, (_, index) => {
-    const timeS = scenario.durationS * index / 120;
-    const x = 42 + 654 * index / 120;
+  points: Array.from({ length: 4321 }, (_, index) => {
+    const timeS = scenario.durationS * index / 4320;
+    const x = 42 + 654 * index / 4320;
     const y = 10 + 120 * (1 - sampleScenario(scenario, timeS));
     return `${x.toFixed(1)},${y.toFixed(1)}`;
   }).join(" "),
@@ -243,6 +283,24 @@ async function benchmark() {
   }
 }
 
+async function refreshLogging() {
+  if (!props.realHardware) return;
+  logStatus.value = await request('log-status');
+}
+
+async function toggleLogging() {
+  loggingBusy.value = true;
+  try {
+    logStatus.value = await request(logStatus.value.recording ? 'log-stop' : 'log-start',
+      { intervalS: loggingInterval.value });
+  } catch (error) {
+    showError(error);
+    await refreshLogging().catch(() => {});
+  } finally {
+    loggingBusy.value = false;
+  }
+}
+
 function updateEnvironment() {
   request('simulation', {
     scenario: scenario.value,
@@ -254,7 +312,7 @@ function joulesToWh(joules) {
 }
 
 function scenarioLabel(id) {
-  return ({ 'clear-day': 'Clear day', 'passing-cloud': 'Passing cloud', 'uniform-shadow': 'Uniform shadow' })[id] ?? id;
+  return SIMPLE_SCENARIOS.find((scenario) => scenario.id === id)?.label ?? id;
 }
 
 function showError(error) {
@@ -263,7 +321,10 @@ function showError(error) {
 
 onMounted(() => {
   if (!props.realHardware) compile().catch(showError);
-  else diagnostics.value = [{ severity: 'info', message: 'Select Install & Run to compile this program on the ESP32.' }];
+  else {
+    diagnostics.value = [{ severity: 'info', message: 'Select Install & Run to compile this program on the ESP32.' }];
+    refreshLogging().catch(showError);
+  }
 });
 </script>
 
@@ -281,7 +342,10 @@ button { padding: 9px 13px; border: 1px solid #9fafaa; border-radius: 5px; backg
 button:hover { background: #e8f1ed; }
 button:disabled { cursor: wait; opacity: .7; }
 .benchmark { margin-left: auto; background: #2f7f66; color: #fff; }
-.lab-side > section, .simulation-inputs, .benchmark-panel { padding: 12px; border: 1px solid #dfe6e3; border-radius: 6px; background: #f8faf8; }
+.log-interval { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
+.log-interval select { width: auto; padding: 7px; }
+.logging-panel p { margin: 8px 0 0; line-height: 1.45; }
+.lab-side > section, .simulation-inputs, .benchmark-panel, .logging-panel { padding: 12px; border: 1px solid #dfe6e3; border-radius: 6px; background: #f8faf8; }
 .task-note, .hints { padding: 10px 12px; border: 1px solid #cbd8d3; border-radius: 6px; background: #f4faf7; line-height: 1.5; }
 .api-guide dl { display: grid; gap: 5px; margin: 10px 0; }
 .api-guide dl div { display: flex; justify-content: space-between; gap: 12px; }
@@ -289,6 +353,8 @@ button:disabled { cursor: wait; opacity: .7; }
 .api-guide p, .console-hint, .fixed-load, .hints p { margin: 8px 0 0; line-height: 1.45; }
 .important { color: #8b3027; }
 .console-hint { color: #586574; font-size: .82rem; }
+.console-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.console-header label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; font-size: .82rem; }
 .hints summary { cursor: pointer; font-weight: 850; }
 .hints ol { padding-left: 20px; line-height: 1.5; }
 code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
@@ -304,7 +370,7 @@ code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
 .chart-axis { stroke: currentColor; stroke-width: 1; }
 .chart-grid { stroke: currentColor; stroke-width: .5; opacity: .25; }
 .scenario-line { fill: none; stroke-width: 3; vector-effect: non-scaling-stroke; }
-.scenario-1 { color: seagreen; stroke: seagreen; }
+.scenario-1 { color: steelblue; stroke: steelblue; }
 .scenario-2 { color: darkorange; stroke: darkorange; }
 .scenario-3 { color: slateblue; stroke: slateblue; }
 .benchmark-profile-chart figcaption { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 20px; font-weight: 750; }

@@ -27,11 +27,4 @@ void handleOtaAdmin();
  */
 bool isOtaSafetyActive();
 
-/**
- * @brief Returns the device-specific OTA administration password.
- *
- * @return Null-terminated password shown on the OLED during startup.
- */
-const char* getOtaAdminPassword();
-
 #endif

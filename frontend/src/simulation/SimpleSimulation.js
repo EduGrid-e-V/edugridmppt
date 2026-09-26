@@ -1,17 +1,91 @@
 const DUTY_MIN = 0.02;
 const DUTY_MAX = 0.98;
 const CONVERTER_EFFICIENCY = 0.82;
+const PANEL_CURVE_SHAPE = 20;
+const FRACTIONAL_VOC_RATIO = Math.pow(1 / (PANEL_CURVE_SHAPE + 1), 1 / PANEL_CURVE_SHAPE);
+const FRACTIONAL_ISC_RATIO = 1 - Math.pow(FRACTIONAL_VOC_RATIO, PANEL_CURVE_SHAPE);
+const FRACTIONAL_SAMPLE_PERIOD_MS = 1000;
+const MPPT_DUTY_STEP = 0.01;
+
+const FLUCTUATING_DAY_SCENARIO = {
+  id: 'fluctuating-day',
+  label: 'Synthetic cloudy PV day (06:00-18:00)',
+  durationS: 43200,
+  profile: 'synthetic-cloudy-day'
+};
 
 export const SIMPLE_SCENARIOS = [
-  { id: 'clear-day', label: 'Clear day', durationS: 120, keyframes: [{ t: 0, irradiance: 0.08 }, { t: 60, irradiance: 1 }, { t: 120, irradiance: 0.08 }] },
-  { id: 'passing-cloud', label: 'Passing cloud', durationS: 120, keyframes: [{ t: 0, irradiance: 0.9 }, { t: 40, irradiance: 0.25, step: true }, { t: 55, irradiance: 0.9, step: true }, { t: 120, irradiance: 0.9 }] },
-  { id: 'uniform-shadow', label: 'Uniform shadow (not partial shading)', durationS: 120, keyframes: [{ t: 0, irradiance: 0.9 }, { t: 60, irradiance: 0.9 }, { t: 63, irradiance: 0.4 }, { t: 120, irradiance: 0.4 }] }
+  { id: 'clear-day', label: 'Clear day', durationS: 1800, keyframes: [{ t: 0, irradiance: 0.08 }, { t: 900, irradiance: 1 }, { t: 1800, irradiance: 0.08 }] },
+  {
+    id: 'passing-cloud',
+    label: 'Cloudy day with passing shadows',
+    durationS: 1800,
+    keyframes: [
+      { t: 0, irradiance: 0.55 }, { t: 150, irradiance: 0.3 },
+      { t: 300, irradiance: 0.65 }, { t: 390, irradiance: 0.15, step: true },
+      { t: 570, irradiance: 0.15 }, { t: 660, irradiance: 0.5 },
+      { t: 810, irradiance: 0.25 }, { t: 990, irradiance: 0.7 },
+      { t: 1080, irradiance: 0.18, step: true }, { t: 1290, irradiance: 0.18 },
+      { t: 1410, irradiance: 0.55 }, { t: 1560, irradiance: 0.28 },
+      { t: 1680, irradiance: 0.62 }, { t: 1800, irradiance: 0.35 }
+    ]
+  },
+  {
+    id: 'uniform-shadow',
+    label: 'Passing whole-panel shadows',
+    durationS: 1800,
+    keyframes: [
+      { t: 0, irradiance: 0.85 }, { t: 210, irradiance: 0.85 },
+      { t: 270, irradiance: 0.28, step: true }, { t: 435, irradiance: 0.28 },
+      { t: 480, irradiance: 0.78, step: true }, { t: 675, irradiance: 0.78 },
+      { t: 690, irradiance: 0.18, step: true }, { t: 900, irradiance: 0.18 },
+      { t: 960, irradiance: 0.7, step: true }, { t: 1170, irradiance: 0.7 },
+      { t: 1260, irradiance: 0.32, step: true }, { t: 1470, irradiance: 0.32 },
+      { t: 1515, irradiance: 0.82, step: true }, { t: 1800, irradiance: 0.82 }
+    ]
+  },
+  FLUCTUATING_DAY_SCENARIO
 ];
+
+export const BENCHMARK_SCENARIOS = [FLUCTUATING_DAY_SCENARIO];
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, Number(value) || 0));
 
+function unitNoise(index, seed) {
+  let value = (index + Math.imul(seed, 374761393)) | 0;
+  value = Math.imul(value ^ (value >>> 13), 1274126177);
+  value = (value ^ (value >>> 16)) >>> 0;
+  return value / 4294967295;
+}
+
+function smoothNoise(timeS, spacingS, seed) {
+  const position = timeS / spacingS;
+  const index = Math.floor(position);
+  const fraction = position - index;
+  const smoothFraction = fraction * fraction * (3 - 2 * fraction);
+  const left = unitNoise(index, seed);
+  return left + (unitNoise(index + 1, seed) - left) * smoothFraction;
+}
+
+function sampleCloudyDay(timeS, durationS) {
+  const daylightFraction = clamp(timeS / durationS, 0, 1);
+  if (daylightFraction <= 0 || daylightFraction >= 1) return 0;
+  const clearSkyEnvelope = Math.pow(Math.sin(Math.PI * daylightFraction), 1.25);
+
+  const cloudBanks = smoothNoise(timeS, 900, 11);
+  const cloudEdges = smoothNoise(timeS, 120, 29);
+  const fastFluctuations = smoothNoise(timeS, 1, 47);
+  const transmission = clamp(
+    0.04 + 0.72 * cloudBanks + 0.32 * (cloudEdges - 0.5) + 0.25 * (fastFluctuations - 0.5),
+    0.04,
+    1
+  );
+  return clearSkyEnvelope * transmission;
+}
+
 export function sampleScenario(scenario, timeS) {
   const t = clamp(timeS, 0, scenario.durationS);
+  if (scenario.profile === 'synthetic-cloudy-day') return sampleCloudyDay(t, scenario.durationS);
   let left = scenario.keyframes[0];
   let right = left;
   for (let index = 1; index < scenario.keyframes.length; index += 1) {
@@ -69,6 +143,8 @@ export class SimpleSimulation {
     this.algorithmElapsedMs = 0;
     this.previous = null;
     this.direction = 1;
+    this.fractionalReference = null;
+    this.fractionalSampleElapsedMs = FRACTIONAL_SAMPLE_PERIOD_MS;
     this.randomState = this.initialSeed;
     return this.emit(this.measure());
   }
@@ -90,7 +166,7 @@ export class SimpleSimulation {
     return {
       voc: 13.5 * voltageTemperatureFactor * (0.9 + 0.1 * Math.pow(irradiance, 0.2)),
       isc: 0.18 * irradiance * (1 + 0.0005 * (this.ambientC - 25)),
-      curveShape: 20,
+      curveShape: PANEL_CURVE_SHAPE,
       irradianceWm2: irradiance * 1000,
       cellTemperatureC
     };
@@ -129,7 +205,22 @@ export class SimpleSimulation {
       }
     } else if (this.algorithm === 'PNO') {
       if (this.previous && frame.p < this.previous.p) this.direction *= -1;
-      this.duty = clamp(this.duty + this.direction * 0.01, DUTY_MIN, DUTY_MAX);
+      this.duty = clamp(this.duty + this.direction * MPPT_DUTY_STEP, DUTY_MIN, DUTY_MAX);
+    } else if (this.algorithm === 'FRACTIONAL_VOC' || this.algorithm === 'FRACTIONAL_ISC') {
+      this.fractionalSampleElapsedMs += this.algorithmPeriodMs;
+      if (this.fractionalReference === null || this.fractionalSampleElapsedMs >= FRACTIONAL_SAMPLE_PERIOD_MS) {
+        const panel = this.panelState();
+        this.fractionalReference = this.algorithm === 'FRACTIONAL_VOC'
+          ? FRACTIONAL_VOC_RATIO * panel.voc
+          : FRACTIONAL_ISC_RATIO * panel.isc;
+        this.fractionalSampleElapsedMs = 0;
+      }
+
+      const measurement = this.algorithm === 'FRACTIONAL_VOC' ? frame.v : frame.i;
+      const direction = this.algorithm === 'FRACTIONAL_VOC'
+        ? (measurement > this.fractionalReference ? 1 : -1)
+        : (measurement < this.fractionalReference ? 1 : -1);
+      this.duty = clamp(this.duty + direction * MPPT_DUTY_STEP, DUTY_MIN, DUTY_MAX);
     } else if (this.algorithm === 'INCCOND' && this.previous) {
       const dV = frame.v - this.previous.v;
       const dI = frame.i - this.previous.i;
@@ -154,7 +245,7 @@ export class SimpleSimulation {
   step() { const frame = this.measure(); this.runAlgorithm(frame); return this.emit(this.measure()); }
   emit(frame) { this.onFrame(frame); return frame; }
   setMode(mode) { this.mode = mode; this.previous = null; }
-  setAlgorithm(algorithm) { this.algorithm = algorithm; this.previous = null; }
+  setAlgorithm(algorithm) { this.algorithm = algorithm; this.previous = null; this.fractionalReference = null; this.fractionalSampleElapsedMs = FRACTIONAL_SAMPLE_PERIOD_MS; }
   setDuty(duty) { this.duty = clamp(duty, DUTY_MIN, DUTY_MAX); this.previous = null; }
   setStudentFunction(fn) { this.studentFunction = typeof fn === 'function' ? fn : null; this.previous = null; }
   setSunPosition(value) { this.sunPosition = clamp(value, 0, 1); this.scenario = null; }

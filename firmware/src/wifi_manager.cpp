@@ -6,6 +6,8 @@
 #include "sweep_manager.h"
 #include "berry_manager.h"
 #include "ota_manager.h"
+#include "log_manager.h"
+#include "log_web.h"
 #include <Arduino.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
@@ -181,6 +183,8 @@ void setupWiFi() {
     Serial.println("An Error has occurred while mounting LittleFS");
   }
 
+  setupLogManager(fileSystemMounted);
+  setupLogRoutes(server);
   setupOtaAdmin(server, fileSystemMounted);
 
   if(fileSystemMounted){

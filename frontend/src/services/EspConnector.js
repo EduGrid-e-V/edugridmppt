@@ -54,6 +54,18 @@ export default class EspConnector {
       };
     }
 
+    if (command === 'log-status' || command === 'log-start' || command === 'log-stop') {
+      const url = command === 'log-status'
+        ? '/api/logging'
+        : command === 'log-start'
+          ? `/api/logging/start?intervalS=${encodeURIComponent(params.intervalS)}`
+          : '/api/logging/stop';
+      const response = await fetch(url, { method: command === 'log-status' ? 'GET' : 'POST' });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || `Logger request failed (${response.status})`);
+      return result;
+    }
+
     // Construct Query String
     const query = new URLSearchParams(params).toString();
     // command is like 'sweep' or 'set'

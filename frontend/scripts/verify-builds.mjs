@@ -12,15 +12,15 @@ const firmware = filesBelow(resolve('../firmware/data'))
   .map((path) => readFileSync(path))
   .map((buffer) => buffer.toString('latin1'))
   .join('\n');
-for (const forbidden of ['berry_compile', 'student-console', 'data:application/wasm']) {
-  if (firmware.includes(forbidden)) throw new Error(`Firmware build contains browser Berry runtime marker: ${forbidden}`);
+for (const forbidden of ['berry_compile', 'student-console', 'data:application/wasm', 'Fractional open-circuit voltage', 'Fractional short-circuit current']) {
+  if (firmware.includes(forbidden)) throw new Error(`Firmware build contains standalone marker: ${forbidden}`);
 }
 for (const required of ['Student / Berry Algorithm Lab', 'Install & Run', '/api/berry']) {
   if (!firmware.includes(required)) throw new Error(`Firmware dashboard is missing ESP32 Berry UI: ${required}`);
 }
 
 const standalone = readFileSync(resolve('dist/edugrid-mppt.html'), 'utf8');
-for (const required of ['berry_compile', 'Student / Berry Algorithm Lab', 'Berry 1.1.0']) {
+for (const required of ['berry_compile', 'Student / Berry Algorithm Lab', 'Berry 1.1.0', 'Fractional open-circuit voltage', 'Fractional short-circuit current']) {
   if (!standalone.includes(required)) throw new Error(`Standalone build is missing: ${required}`);
 }
 if (/<script[^>]+src=|<link[^>]+rel=["']stylesheet/.test(standalone)) {

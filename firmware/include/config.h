@@ -66,27 +66,6 @@
 #define CAPTIVE_DNS_PORT 53
 #endif
 
-// ================= OTA ADMINISTRATION =================
-/** @brief Browser login name for the embedded ESP32 recovery page. */
-#ifndef OTA_ADMIN_USERNAME
-#define OTA_ADMIN_USERNAME "admin"
-#endif
-
-/**
- * @brief Optional fixed OTA password.
- *
- * Leave empty to derive a unique password from the ESP32 chip ID. The generated
- * password is displayed on the OLED during startup and printed to Serial.
- */
-#ifndef OTA_ADMIN_PASSWORD
-#define OTA_ADMIN_PASSWORD ""
-#endif
-
-/** @brief Prefix used for a generated, device-specific OTA password. */
-#ifndef OTA_ADMIN_PASSWORD_PREFIX
-#define OTA_ADMIN_PASSWORD_PREFIX "EduGrid-"
-#endif
-
 // ================= PWM SETTINGS =================
 #define PWM_MIN_DUTY    0.0f    /** @brief Minimum allowed PWM duty cycle (0.0 to 1.0). */
 #define PWM_MAX_DUTY    0.98f   /** @brief Maximum allowed PWM duty cycle (0.0 to 1.0). */

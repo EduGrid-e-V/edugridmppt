@@ -34,12 +34,11 @@ void displaySplash();
 void displayWiFiSsid(const char* ssid);
 
 /**
- * @brief Shows the WiFi SSID and device-specific OTA login on startup.
+ * @brief Shows the open WiFi access point and local web pages on startup.
  *
  * @param ssid WiFi access point name.
- * @param adminPassword Password for the embedded /admin recovery page.
  */
-void displayWiFiCredentials(const char* ssid, const char* adminPassword);
+void displayWiFiAccessPoint(const char* ssid);
 
 /**
  * @brief Updates the display with current telemetry data.

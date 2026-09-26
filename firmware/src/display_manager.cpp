@@ -95,28 +95,23 @@ void displayWiFiSsid(const char* ssid) {
   display.display();
 }
 
-void displayWiFiCredentials(const char* ssid, const char* adminPassword) {
+void displayWiFiAccessPoint(const char* ssid) {
   if (!displayIsReady) return;
 
   const char* shownSsid = (ssid != nullptr && ssid[0] != '\0')
       ? ssid
       : WIFI_SSID_PREFIX;
-  const char* shownPassword = (adminPassword != nullptr && adminPassword[0] != '\0')
-      ? adminPassword
-      : "not configured";
 
   display.clearDisplay();
   display.setTextColor(OLED_TEXT_COLOR);
   display.setTextSize(1);
   display.setCursor(0, 0);
-  display.println(F("WiFi AP / OTA"));
+  display.println(F("EduGrid WiFi (open)"));
   display.print(F("SSID: "));
   display.println(shownSsid);
-  display.println(F("URL: 192.168.4.1"));
-  display.print(F("Admin: "));
-  display.println(OTA_ADMIN_USERNAME);
-  display.println(F("Password:"));
-  display.println(shownPassword);
+  display.println(F("192.168.4.1"));
+  display.println(F("Updates: /admin"));
+  display.println(F("Files: /downloads"));
   display.display();
 }
 

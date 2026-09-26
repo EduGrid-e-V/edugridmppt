@@ -8,7 +8,7 @@ const source = (path) => readFileSync(resolve(path), 'utf8');
 describe('simple simulation integration', () => {
   it('uses one simple model in both simulation connectors', () => {
     expect(source('src/services/MockConnector.js')).toContain("import { SimpleSimulation } from '../simulation/SimpleSimulation.js'");
-    expect(source('src/workers/simulation.worker.js')).toContain("import { SimpleSimulation, SIMPLE_SCENARIOS } from '../simulation/SimpleSimulation.js'");
+    expect(source('src/workers/simulation.worker.js')).toContain("import { SimpleSimulation, BENCHMARK_SCENARIOS } from '../simulation/SimpleSimulation.js'");
   });
 
   it('matches the real-kit ratings and produces an approximately 2 W peak', () => {

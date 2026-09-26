@@ -80,12 +80,14 @@ The Nano ESP32 firmware contains a recovery page that does not depend on the
 dashboard filesystem. After one USB installation of this firmware, subsequent
 application and dashboard updates can be installed over the board's WiFi:
 
-1. Connect to the board's `EduGrid_XX` access point.
-2. Open `http://192.168.4.1/admin`.
-3. Sign in as `admin`. The device-specific password appears on the OLED for the
-   first 15 seconds after startup and is also printed to the Serial monitor.
-4. Upload either the application image or the LittleFS image.
-5. Keep the board powered until it restarts.
+1. Connect to the board's open `EduGrid_XX` access point.
+2. Open `http://192.168.4.1/admin`; no login or password is required.
+3. Upload either the application image or the LittleFS image.
+4. Confirm the upload and keep the board powered until it restarts.
+
+**Classroom access warning:** anyone connected to this open access point can replace
+the firmware or filesystem. Only power it up in a supervised setting and keep
+the upload files and a USB recovery path available.
 
 Build the upload files with:
 
@@ -114,20 +116,19 @@ Before either upload starts, the firmware stops an active sweep and holds the
 converter at minimum duty. The normal control loop remains disabled until the
 upload fails or the board restarts.
 
-To use a deliberately assigned password instead of the generated device password,
-define `OTA_ADMIN_PASSWORD` as a private build flag. Do not commit a shared
-classroom password to this repository.
-
 The browser updater intentionally does not replace the bootloader or partition
 table. Changes to either still require a USB connection.
 
-The board creates an open WiFi access point whose final two hexadecimal characters identify the individual board. Its OLED shows the network and update credentials for the first 15 seconds after power-up, for example:
+The board creates an open WiFi access point whose final two hexadecimal
+characters identify the individual board. Its OLED shows the network and page
+addresses for the first 15 seconds after power-up, for example:
 
 ```text
+EduGrid WiFi (open)
 SSID: EduGrid_A3
-URL:  http://192.168.4.1
-Admin: admin
-Password: EduGrid-1234A3
+192.168.4.1
+Updates: /admin
+Files: /downloads
 ```
 
 ## Controls
@@ -164,6 +165,31 @@ Berry management API:
 A failed upload never replaces the previous valid VM or saved source. This is a
 software safety boundary, not a substitute for the converter's electrical
 current limiting and physical protections.
+
+## Real-experiment CSV logging
+
+On the ESP32 dashboard, select Real and Student / Berry. The panel provides
+Start logging and Stop logging at 1 s, 30 s, 1 min, or 5 min intervals. Only
+real sensor readings are recorded; the standalone simulation retains Benchmark.
+
+Recordings are saved as /logs/run-0001.csv etc. in LittleFS. Select the
+Downloads button in the real dashboard header, or open /downloads on the
+device access point, to download or delete older files without a password. The CSV columns are elapsed
+seconds, PV voltage (V), PV current (A), load voltage (V), load current (A),
+and duty cycle (0-1). Missing load-sensor readings are blank.
+
+CSV data is capped at 4 MiB and 64 files, with at least 256 KiB free space
+reserved. At a conservative 64 bytes per row, 4 MiB holds approximately
+18 hours at 1 s, 23 days at 30 s, 46 days at 1 min, or 228 days at
+5 min; headers, filesystem overhead, and existing files reduce that.
+Storage full or write failure stops recording. OTA closes the active CSV.
+A firmware-only update normally leaves LittleFS intact; a filesystem update
+replaces it and may erase all recordings. Download files you want to keep first.
+
+Logger API: GET /api/logging returns status and file list;
+POST /api/logging/start?intervalS=1|30|60|300 starts a run;
+POST /api/logging/stop closes it; GET /api/logging/file?name=run-0001.csv
+downloads it. DELETE on the same file URL deletes it without authentication.
 
 ## Student Workspace
 

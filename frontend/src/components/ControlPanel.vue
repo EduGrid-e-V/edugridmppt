@@ -23,8 +23,9 @@
             :key="reading.key"
             class="reading-row"
             :class="reading.key"
-            :title="reading.description"
+            :data-hint="reading.description"
             :aria-label="`${reading.label}: ${reading.description}`"
+            tabindex="0"
           >
             <dt>{{ reading.label }}</dt>
             <dd>
@@ -46,8 +47,9 @@
             :key="reading.key"
             class="reading-row"
             :class="reading.key"
-            :title="reading.description"
+            :data-hint="reading.description"
             :aria-label="`${reading.label}: ${reading.description}`"
+            tabindex="0"
           >
             <dt>{{ reading.label }}</dt>
             <dd>
@@ -98,6 +100,7 @@
             </option>
           </select>
         </div>
+        <p v-if="algorithmDescription" class="algorithm-description">{{ algorithmDescription }}</p>
         <button class="action-btn sweep" @click="$emit('trigger:sweep')">
           Start Sweep
         </button>
@@ -182,6 +185,11 @@ const loadReadings = computed(() => [
 ]);
 
 const dutyCycleDescription = 'Duty cycle is the fraction of each PWM period where the converter switch is on. Changing it changes the electrical load seen by the panel.';
+
+const algorithmDescription = computed(() => ({
+  FRACTIONAL_VOC: 'Samples the simulated open-circuit voltage once per second and targets 85.9% of it. Sampling is idealized and does not include switching loss.',
+  FRACTIONAL_ISC: 'Samples the simulated short-circuit current once per second and targets 95.2% of it. Sampling is idealized and does not include switching loss.'
+})[props.algorithm] ?? '');
 
 const formatMeasurement = (measurementValue) => {
   const numericMeasurement = Number(measurementValue);
@@ -303,6 +311,7 @@ const formatLoadMeasurement = (measurementValue) => {
 }
 
 .reading-row {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(72px, 1fr) auto;
   align-items: center;
@@ -311,6 +320,39 @@ const formatLoadMeasurement = (measurementValue) => {
   padding: 5px 0;
   border-top: 1px solid #e5ece9;
   cursor: help;
+}
+
+.reading-row::after {
+  content: attr(data-hint);
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  bottom: calc(100% + 5px);
+  width: max-content;
+  max-width: min(260px, 90vw);
+  padding: 8px 10px;
+  border-radius: 5px;
+  background: #17212b;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 400;
+  line-height: 1.4;
+  white-space: normal;
+  box-shadow: 0 4px 12px rgba(25, 39, 52, 0.2);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.reading-row:hover::after,
+.reading-row:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+}
+
+.reading-row:focus-visible {
+  outline: 2px solid #2f7f66;
+  outline-offset: 2px;
 }
 
 .reading-row:first-child {
@@ -444,6 +486,13 @@ output {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.algorithm-description {
+  margin: 0;
+  color: #5e6875;
+  font-size: 0.78rem;
+  line-height: 1.4;
 }
 
 .algo-options select {

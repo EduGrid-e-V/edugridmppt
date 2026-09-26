@@ -1,10 +1,11 @@
-import { SimpleSimulation, SIMPLE_SCENARIOS } from '../simulation/SimpleSimulation.js';
+import { SimpleSimulation, BENCHMARK_SCENARIOS } from '../simulation/SimpleSimulation.js';
 import { createBerryRuntime } from '../standalone/berry/runtime.js';
 
 const engine = new SimpleSimulation({
   onFrame: (frame) => postMessage({ type: 'telemetry', payload: frame })
 });
-const BENCHMARK_START_DUTIES = [0.02, 0.2, 0.5, 0.8, 0.98];
+const BENCHMARK_START_DUTY = 0.2;
+const BENCHMARK_STEP_S = 0.1;
 let sweepData = [];
 let berryRuntime = null;
 let compiledCode = '';
@@ -40,38 +41,26 @@ async function benchmark(code) {
   const diagnostics = runtime.compile(code);
   if (diagnostics.some(({ severity }) => severity === 'error')) return { diagnostics, runs: [] };
   const runs = [];
-  for (const scenario of SIMPLE_SCENARIOS) {
+  for (const scenario of BENCHMARK_SCENARIOS) {
+    const benchmarkEngine = new SimpleSimulation({ noise: 0, tickMs: 100, algorithmPeriodMs: 100, onFrame: () => {} });
+    runtime.compile(code);
+    installStudent(runtime, benchmarkEngine);
+    benchmarkEngine.setMode('AUTO');
+    benchmarkEngine.setDuty(BENCHMARK_START_DUTY);
+    benchmarkEngine.loadScenario(scenario.id);
     let energyJ = 0;
     let availableEnergyJ = 0;
-    let worstCapturePercent = Infinity;
-    for (const startDuty of BENCHMARK_START_DUTIES) {
-      const benchmarkEngine = new SimpleSimulation({ noise: 0, onFrame: () => {} });
-      runtime.compile(code);
-      installStudent(runtime, benchmarkEngine);
-      benchmarkEngine.setMode('AUTO');
-      benchmarkEngine.setDuty(startDuty);
-      benchmarkEngine.loadScenario(scenario.id);
-      let trialEnergyJ = 0;
-      let trialAvailableEnergyJ = 0;
-      for (let index = 0; index < Math.ceil(scenario.durationS / 0.05); index += 1) {
-        const frame = benchmarkEngine.tick();
-        trialEnergyJ += frame.p * 0.05;
-        trialAvailableEnergyJ += benchmarkEngine.maximumPower() * 0.05;
-      }
-      energyJ += trialEnergyJ;
-      availableEnergyJ += trialAvailableEnergyJ;
-      const trialCapturePercent = trialAvailableEnergyJ > 0
-        ? 100 * trialEnergyJ / trialAvailableEnergyJ
-        : 0;
-      worstCapturePercent = Math.min(worstCapturePercent, trialCapturePercent);
+    for (let index = 0; index < Math.ceil(scenario.durationS / BENCHMARK_STEP_S); index += 1) {
+      const frame = benchmarkEngine.tick();
+      energyJ += frame.p * BENCHMARK_STEP_S;
+      availableEnergyJ += benchmarkEngine.maximumPower() * BENCHMARK_STEP_S;
     }
     runs.push({
       scenario: scenario.id,
       energyJ,
       availableEnergyJ,
       capturePercent: availableEnergyJ > 0 ? 100 * energyJ / availableEnergyJ : 0,
-      worstCapturePercent,
-      simulatedDurationS: scenario.durationS * BENCHMARK_START_DUTIES.length
+      simulatedDurationS: scenario.durationS
     });
   }
   runtime.compile(code);

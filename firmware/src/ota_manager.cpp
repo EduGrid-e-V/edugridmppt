@@ -10,6 +10,7 @@
 #include "config.h"
 #include "pwm_manager.h"
 #include "sweep_manager.h"
+#include "log_manager.h"
 
 #include <Arduino.h>
 #include <LittleFS.h>
@@ -21,7 +22,6 @@
 
 namespace {
 
-constexpr char ADMIN_REALM[] = "EduGrid OTA";
 constexpr char STUDENT_PROGRAM_PATH[] = "/student.be";
 constexpr char PREFERENCES_NAMESPACE[] = "edugrid_ota";
 constexpr char PROGRAM_BACKUP_KEY[] = "student_be";
@@ -37,7 +37,6 @@ bool fileSystemIsMounted = false;
 unsigned long lastUploadActivityMs = 0;
 unsigned long rebootAtMs = 0;
 String lastUpdateResult = "No update attempted since boot.";
-char generatedAdminPassword[20] = "";
 
 const char ADMIN_PAGE[] PROGMEM = R"HTML(
 <!doctype html>
@@ -50,9 +49,9 @@ const char ADMIN_PAGE[] PROGMEM = R"HTML(
 :root{font-family:system-ui,sans-serif;color:#17242b;background:#eef4f1}body{margin:0;padding:24px}.wrap{max-width:760px;margin:auto}header,.card{background:#fff;border:1px solid #c9d8d1;border-radius:12px;padding:20px;margin-bottom:16px}h1,h2{margin-top:0}h1{font-size:1.7rem}.muted{color:#52645d}.warning{background:#fff6df;border-left:4px solid #c78400;padding:12px}label{display:block;font-weight:700;margin:12px 0 6px}input[type=file]{width:100%;box-sizing:border-box;border:1px solid #9eb1a8;border-radius:6px;padding:10px}button{margin-top:12px;background:#147b57;color:#fff;border:0;border-radius:6px;padding:11px 16px;font-weight:700;cursor:pointer}button:disabled{opacity:.55;cursor:wait}progress{display:block;width:100%;height:20px;margin-top:12px}.result{white-space:pre-wrap;margin-top:10px}.back{color:#147b57}.danger button{background:#a33b2b}</style>
 </head>
 <body><main class="wrap">
-<header><p><a class="back" href="/">&larr; Dashboard</a></p><h1>EduGrid recovery and updates</h1><p class="muted">This page is built into the firmware. It remains available even if the dashboard filesystem is damaged.</p><div id="status">Loading device status...</div></header>
+<header><p><a class="back" href="/">&larr; Dashboard</a></p><h1>EduGrid recovery and updates</h1><p class="muted">This page is built into the firmware. It remains available even if the dashboard filesystem is damaged.</p><p class="warning">No password is required. Anyone connected to the open EduGrid WiFi can install firmware or replace the dashboard filesystem.</p><div id="status">Loading device status...</div></header>
 <section class="card"><h2>1. Firmware</h2><p>Uploads <code>firmware.bin</code> to the inactive application slot. The currently running firmware is not overwritten.</p><form action="/admin/update/firmware" method="post" enctype="multipart/form-data"><label for="firmware">Firmware image</label><input id="firmware" name="image" type="file" accept=".bin,application/octet-stream" required><button type="submit">Install firmware and restart</button><progress value="0" max="100" hidden></progress><div class="result"></div></form></section>
-<section class="card"><h2>2. Dashboard filesystem</h2><p>Uploads <code>littlefs.bin</code>. This replaces the complete dashboard filesystem. A saved <code>/student.be</code> program is backed up separately and restored after a successful upload.</p><p class="warning"><strong>Keep power connected.</strong> Unlike application OTA, the filesystem has no second slot. If this upload is interrupted, return to this recovery page and upload the filesystem again.</p><form action="/admin/update/filesystem" method="post" enctype="multipart/form-data"><label for="filesystem">LittleFS image</label><input id="filesystem" name="image" type="file" accept=".bin,application/octet-stream" required><button type="submit">Replace filesystem and restart</button><progress value="0" max="100" hidden></progress><div class="result"></div></form></section>
+<section class="card"><h2>2. Dashboard filesystem</h2><p>Uploads <code>littlefs.bin</code>. This replaces the complete dashboard filesystem. A saved <code>/student.be</code> program is backed up separately and restored after a successful upload. Experiment CSV recordings are not backed up; download them from <a href="/downloads">/downloads</a> first if you want to keep them.</p><p class="warning"><strong>Keep power connected.</strong> Unlike application OTA, the filesystem has no second slot. If this upload is interrupted, return to this recovery page and upload the filesystem again.</p><form action="/admin/update/filesystem" method="post" enctype="multipart/form-data"><label for="filesystem">LittleFS image</label><input id="filesystem" name="image" type="file" accept=".bin,application/octet-stream" required><button type="submit">Replace filesystem and restart</button><progress value="0" max="100" hidden></progress><div class="result"></div></form></section>
 </main>
 <script>
 const status=document.querySelector('#status');
@@ -60,17 +59,6 @@ fetch('/admin/status').then(r=>r.json()).then(s=>{status.innerHTML=`<strong>${s.
 document.querySelectorAll('form').forEach(form=>form.addEventListener('submit',event=>{event.preventDefault();const file=form.querySelector('input').files[0];if(!file)return;if(!confirm('Install '+file.name+'? Keep the board powered until it restarts.'))return;const button=form.querySelector('button'),progress=form.querySelector('progress'),result=form.querySelector('.result'),body=new FormData(form),xhr=new XMLHttpRequest();button.disabled=true;progress.hidden=false;result.textContent='Uploading...';xhr.upload.onprogress=e=>{if(e.lengthComputable)progress.value=e.loaded/e.total*100};xhr.onload=()=>{document.open();document.write(xhr.responseText);document.close()};xhr.onerror=()=>{button.disabled=false;result.textContent='Upload connection failed. The recovery page is still available; reload and try again.'};xhr.open('POST',form.action);xhr.send(body)}));
 </script></body></html>
 )HTML";
-
-bool isAuthenticated(AsyncWebServerRequest* request) {
-    return request->authenticate(OTA_ADMIN_USERNAME,
-                                 getOtaAdminPassword(),
-                                 ADMIN_REALM,
-                                 false);
-}
-
-void requestAuthentication(AsyncWebServerRequest* request) {
-    request->requestAuthentication(AsyncAuthType::AUTH_DIGEST, ADMIN_REALM);
-}
 
 String jsonEscape(const String& value) {
     String escaped;
@@ -185,6 +173,7 @@ bool restoreStudentProgramIfNeeded() {
 }
 
 void makeConverterSafe() {
+    stopLogRecording();
     cancelSweep();
     setDuty(PWM_MIN_DUTY);
 }
@@ -193,6 +182,7 @@ void finishFailedUpload(const String& message) {
     if (Update.isRunning()) Update.abort();
     if (updatingFileSystem && !fileSystemIsMounted) {
         fileSystemIsMounted = LittleFS.begin(false);
+        setupLogManager(fileSystemIsMounted);
     }
     updateInProgress = false;
     updatingFileSystem = false;
@@ -203,17 +193,19 @@ void finishFailedUpload(const String& message) {
 
 void beginUpload(AsyncWebServerRequest* request, bool fileSystemUpdate) {
     request->setAttribute("otaAccepted", false);
-    if (!isAuthenticated(request)) return;
     if (updateInProgress || rebootPending) {
         request->setAttribute("otaError", "Another update is already running.");
         return;
     }
 
+    updateInProgress = true;
+    lastUploadActivityMs = millis();
     makeConverterSafe();
     updatingFileSystem = fileSystemUpdate;
     if (fileSystemUpdate) {
         backUpStudentProgram();
         if (fileSystemIsMounted) {
+            setupLogManager(false);
             LittleFS.end();
             fileSystemIsMounted = false;
         }
@@ -227,8 +219,6 @@ void beginUpload(AsyncWebServerRequest* request, bool fileSystemUpdate) {
         return;
     }
 
-    updateInProgress = true;
-    lastUploadActivityMs = millis();
     request->setAttribute("otaAccepted", true);
     Serial.println(fileSystemUpdate ? F("OTA: filesystem upload started")
                                     : F("OTA: firmware upload started"));
@@ -263,6 +253,7 @@ void receiveUpload(AsyncWebServerRequest* request,
 
     if (fileSystemUpdate) {
         fileSystemIsMounted = LittleFS.begin(false);
+        setupLogManager(fileSystemIsMounted);
         if (!fileSystemIsMounted) {
             String error = "The image was written but LittleFS could not mount it. Upload a valid filesystem image.";
             request->setAttribute("otaError", error);
@@ -286,11 +277,6 @@ void receiveUpload(AsyncWebServerRequest* request,
 }
 
 void sendUploadResult(AsyncWebServerRequest* request) {
-    if (!isAuthenticated(request)) {
-        requestAuthentication(request);
-        return;
-    }
-
     bool succeeded = request->getAttribute("otaSucceeded", false);
     String message = lastUpdateResult;
     if (!succeeded) {
@@ -305,19 +291,6 @@ void sendUploadResult(AsyncWebServerRequest* request) {
 
 }  // namespace
 
-const char* getOtaAdminPassword() {
-    if (OTA_ADMIN_PASSWORD[0] != '\0') return OTA_ADMIN_PASSWORD;
-    if (generatedAdminPassword[0] == '\0') {
-        uint32_t deviceId = static_cast<uint32_t>(ESP.getEfuseMac() & 0xFFFFFFULL);
-        snprintf(generatedAdminPassword,
-                 sizeof(generatedAdminPassword),
-                 "%s%06lX",
-                 OTA_ADMIN_PASSWORD_PREFIX,
-                 static_cast<unsigned long>(deviceId));
-    }
-    return generatedAdminPassword;
-}
-
 void setupOtaAdmin(AsyncWebServer& server, bool fileSystemMounted) {
     fileSystemIsMounted = fileSystemMounted;
     restoreStudentProgramIfNeeded();
@@ -325,24 +298,12 @@ void setupOtaAdmin(AsyncWebServer& server, bool fileSystemMounted) {
     Serial.print(F("OTA admin: http://"));
     Serial.print(WiFi.softAPIP());
     Serial.println(F("/admin"));
-    Serial.print(F("OTA user: "));
-    Serial.println(OTA_ADMIN_USERNAME);
-    Serial.print(F("OTA password: "));
-    Serial.println(getOtaAdminPassword());
 
     server.on("/admin", HTTP_GET, [](AsyncWebServerRequest* request) {
-        if (!isAuthenticated(request)) {
-            requestAuthentication(request);
-            return;
-        }
         request->send(200, "text/html; charset=utf-8", ADMIN_PAGE);
     });
 
     server.on("/admin/status", HTTP_GET, [](AsyncWebServerRequest* request) {
-        if (!isAuthenticated(request)) {
-            requestAuthentication(request);
-            return;
-        }
         const esp_partition_t* runningPartition = esp_ota_get_running_partition();
         String json = "{";
         json += "\"board\":\"" + jsonEscape(ESP.getChipModel()) + "\",";

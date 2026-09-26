@@ -39,6 +39,18 @@ This is not just a board and some code. It is a small learning environment: meas
 | look at the circuit and PCB | [Hardware Files](hardware/README.md) |
 | explore the web dashboard | [Dashboard Source](frontend/README.md) |
 
+## ESP32 web pages
+
+When connected to the board's open `EduGrid_XX` WiFi network, open
+`http://192.168.4.1/` for the dashboard. In the real experiment view,
+select **Downloads** in the header to find recorded CSV files. The
+`/downloads` page can also be opened directly.
+
+`http://192.168.4.1/admin` is the firmware and filesystem update page.
+Neither page requires a password. Anyone connected to the open EduGrid WiFi
+can update the board or delete recordings; use it in a supervised setting.
+See the [firmware instructions](firmware/README.md) for the update workflow.
+
 ## For Students
 
 Begin with the workbook and the manual experiments. Your first goal is simple: find the duty setting where the solar panel produces the most power.
@@ -62,3 +74,7 @@ The [Student Workbook](docs/STUDENT_WORKBOOK.md) is written so it can be used in
 EduGrid e.V works to make renewable energy education freely available. This project supports that mission with open learning material, open hardware files, and firmware that students can actually read and change.
 
 Renewable energy becomes less mysterious when learners can touch it, measure it, and improve it. That is the spirit of EduGrid MPPT.
+
+## License
+
+Hardware, firmware, and documentation are each released under different open licenses. See [LICENSE.md](LICENSE.md) for details.

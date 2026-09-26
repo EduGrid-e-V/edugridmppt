@@ -311,7 +311,8 @@ button {
   padding-top: 12px;
 }
 
-.advanced-toggle {
+.advanced-toggle,
+.downloads-link {
   min-height: 38px;
   padding: 0 14px;
   border: 1px solid #cfd9d5;
@@ -322,7 +323,15 @@ button {
   font-weight: 850;
 }
 
-.advanced-toggle:hover {
+.downloads-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.advanced-toggle:hover,
+.downloads-link:hover {
   border-color: #2f7f66;
   color: #2f7f66;
 }
@@ -417,7 +426,8 @@ button {
     justify-content: stretch;
   }
 
-  .advanced-toggle {
+  .advanced-toggle,
+  .downloads-link {
     width: 100%;
   }
 
