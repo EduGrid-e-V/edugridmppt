@@ -5,6 +5,7 @@
 #include "mppt_alg.h"
 #include "sweep_manager.h"
 #include "berry_manager.h"
+#include "ota_manager.h"
 #include <Arduino.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
@@ -175,9 +176,14 @@ void setupWiFi() {
   Serial.print("Captive portal DNS: ");
   Serial.println(captivePortalIsRunning ? "started" : "failed");
 
-  if(!LittleFS.begin()){
+  bool fileSystemMounted = LittleFS.begin(false);
+  if(!fileSystemMounted){
     Serial.println("An Error has occurred while mounting LittleFS");
-  } else {
+  }
+
+  setupOtaAdmin(server, fileSystemMounted);
+
+  if(fileSystemMounted){
     server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
   }
 
@@ -272,6 +278,8 @@ void setupWiFi() {
 }
 
 void handleWiFi() {
+    handleOtaAdmin();
+
     if (captivePortalIsRunning) {
         dnsServer.processNextRequest();
     }
