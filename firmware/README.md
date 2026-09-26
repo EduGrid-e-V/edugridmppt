@@ -11,6 +11,7 @@ Firmware for the EduGrid MPPT trainer. It runs on the classic Arduino Nano and t
 - OLED telemetry with SSD1306 default and SH1106 option
 - Manual duty control with button and potentiometer
 - Nano ESP32 WiFi dashboard with live telemetry, manual duty, algorithm selection, and I–V sweep
+- Restricted Berry 1.1.0 student algorithms on the Nano ESP32
 
 ## Hardware
 
@@ -88,6 +89,32 @@ URL:  http://192.168.4.1
 | Long button press | Switch Student/P&O and Incremental Conductance |
 | Slide potentiometer | Set duty cycle in Manual mode |
 | Web dashboard | Set mode, duty, algorithm, and start an I–V sweep |
+
+## Berry on the Nano ESP32
+
+The ESP32 dashboard can compile, install, and run the same `mppt()` Berry program
+used by the standalone simulator. Select **Student / Berry**, edit the program,
+then select **Install & Run**. The source is compiled on the ESP32 and the last
+verified program is stored as `/student.be` in LittleFS.
+
+The embedded runtime exposes only `PV`, `load`, and `duty`. Filesystem, OS,
+network, debug, introspection, shared-library, and bytecode-file modules are
+disabled. Firmware—not student code—applies the resulting duty cycle. Each call
+has a 20 ms wall-clock limit, duty remains inside the configured PWM limits, and
+one call can change duty by at most 0.05. A timeout, runtime error, or non-finite
+duty disables execution and moves PWM to minimum duty.
+
+Berry management API:
+
+| Endpoint | Purpose |
+| --- | --- |
+| `POST /api/berry` | Compile and atomically install a plain-text Berry program |
+| `GET /api/berry` | Read installation health, diagnostics, and active source |
+| `DELETE /api/berry` | Remove the active and saved student program |
+
+A failed upload never replaces the previous valid VM or saved source. This is a
+software safety boundary, not a substitute for the converter's electrical
+current limiting and physical protections.
 
 ## Student Workspace
 

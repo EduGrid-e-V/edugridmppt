@@ -13,9 +13,14 @@ void setupPWM() {
 #ifdef ESP32
   // ESP32 PWM Setup using LEDC
   // Frequency: 62.5kHz, Resolution: 8-bit (0-255)
+#if ESP_ARDUINO_VERSION_MAJOR >= 3
+  ledcAttach(GATE_PIN, 62500, 8);
+  ledcWrite(GATE_PIN, 0);
+#else
   ledcSetup(0, 62500, 8);
   ledcAttachPin(GATE_PIN, 0);
   ledcWrite(0, 0);
+#endif
 #else
   // AVR (Nano) PWM Setup
   pinMode(GATE_PIN, OUTPUT);
@@ -68,7 +73,11 @@ void setDuty(float d) {
   if (pwm > 255) pwm = 255;
   
 #ifdef ESP32
+#if ESP_ARDUINO_VERSION_MAJOR >= 3
+  ledcWrite(GATE_PIN, pwm);
+#else
   ledcWrite(0, pwm);
+#endif
 #else
   OCR1A = pwm; // Write duty to OC1A (D9)
 #endif
