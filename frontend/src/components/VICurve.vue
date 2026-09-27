@@ -75,6 +75,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { t } from '../i18n.js';
+import { POWER_TICK_STEP_W, formatPowerTick, powerAxisMaximum } from './chartAxes.js';
 
 const props = defineProps({
   voltage: { type: Number, required: true },
@@ -90,8 +91,8 @@ const maxSeen = ref({
 });
 const MAX_HISTORY = 42;
 const MIN_CURRENT_AXIS_A = 0.2;
-const MIN_POWER_AXIS_W = 2;
-const POWER_TICK_STEP_W = 0.5;
+const MIN_VOLTAGE_AXIS_V = 20;
+const VOLTAGE_TICK_STEP_V = 5;
 const hasSweep = computed(() => props.sweepData?.length >= 2);
 
 const frameElement = ref(null);
@@ -124,15 +125,15 @@ onUnmounted(() => frameObserver?.disconnect());
 
 const bounds = computed(() => {
   return {
-    x: niceMax(maxSeen.value.voltage * 1.05, 1),
+    x: Math.ceil(Math.max(MIN_VOLTAGE_AXIS_V, maxSeen.value.voltage) / VOLTAGE_TICK_STEP_V) * VOLTAGE_TICK_STEP_V,
     y: niceMax(Math.max(MIN_CURRENT_AXIS_A, maxSeen.value.current * 1.16), MIN_CURRENT_AXIS_A),
-    power: Math.ceil(Math.max(MIN_POWER_AXIS_W, maxSeen.value.power) / POWER_TICK_STEP_W) * POWER_TICK_STEP_W
+    power: powerAxisMaximum(maxSeen.value.power)
   };
 });
 
-const xTicks = computed(() => createTicks(bounds.value.x, 5).map((value) => ({
+const xTicks = computed(() => createTicks(bounds.value.x, Math.round(bounds.value.x / VOLTAGE_TICK_STEP_V)).map((value) => ({
   value,
-  label: formatTick(value),
+  label: value.toFixed(0),
   x: toX(value)
 })));
 
@@ -144,7 +145,7 @@ const yTicks = computed(() => createTicks(bounds.value.y, 4).map((value) => ({
 
 const powerTicks = computed(() => createTicks(bounds.value.power, Math.round(bounds.value.power / POWER_TICK_STEP_W)).map((value) => ({
   value,
-  label: formatTick(value, POWER_TICK_STEP_W),
+  label: formatPowerTick(value),
   y: toPowerY(value)
 })));
 

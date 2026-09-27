@@ -49,8 +49,9 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { t } from '../i18n.js';
+import { POWER_TICK_STEP_W, formatPowerTick, powerAxisMaximum } from './chartAxes.js';
 
 const props = defineProps({
   data: { type: Array, default: () => [[], []] },
@@ -62,6 +63,7 @@ const props = defineProps({
 
 const frameElement = ref(null);
 const chartHeight = ref(450);
+const maximumSeenW = ref(0);
 const plot = reactive({
   x: 82,
   y: 18,
@@ -88,6 +90,16 @@ onMounted(() => {
 
 onUnmounted(() => frameObserver?.disconnect());
 
+watch(() => props.data, (data) => {
+  const values = data?.[1] || [];
+  if (!values.length) {
+    maximumSeenW.value = 0;
+    return;
+  }
+  const highest = Math.max(...values.map((value) => Number(value) || 0));
+  maximumSeenW.value = Math.max(maximumSeenW.value, highest);
+}, { immediate: true });
+
 const points = computed(() => {
   const times = props.data?.[0] || [];
   const values = props.data?.[1] || [];
@@ -110,7 +122,7 @@ const ranges = computed(() => {
     xMin,
     xMax,
     yMin: Math.min(0, props.min ?? 0),
-    yMax: props.max
+    yMax: powerAxisMaximum(maximumSeenW.value, props.max)
   };
 });
 
@@ -131,9 +143,9 @@ const xTicks = computed(() => {
 
 const yTicks = computed(() => {
   const { yMin, yMax } = ranges.value;
-  return createTicks(yMin, yMax, 4).map((value) => ({
+  return createTicks(yMin, yMax, Math.round((yMax - yMin) / POWER_TICK_STEP_W)).map((value) => ({
     value,
-    label: formatTick(value, (yMax - yMin) / 4),
+    label: formatPowerTick(value),
     y: toY(value)
   }));
 });
@@ -181,14 +193,6 @@ function pointsToPath(mappedPoints) {
 function createTicks(min, max, count) {
   const span = max - min;
   return Array.from({ length: count + 1 }, (_, index) => min + (span / count) * index);
-}
-
-function formatTick(value, step) {
-  if (Math.abs(value) >= 10) return value.toFixed(0);
-  const decimals = step < 0.1
-    ? Math.min(4, Math.max(2, Math.ceil(-Math.log10(step))))
-    : 1;
-  return value.toFixed(decimals);
 }
 
 function hexToRgba(hex, alpha) {
