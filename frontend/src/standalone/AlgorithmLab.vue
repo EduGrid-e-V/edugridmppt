@@ -2,71 +2,65 @@
   <section class="algorithm-lab" aria-labelledby="algorithm-lab-title">
     <header>
       <div>
-        <p class="kicker">{{ realHardware ? 'Real ESP32 experiment' : 'Standalone simulation' }}</p>
-        <h2 id="algorithm-lab-title">Student / Berry Algorithm Lab</h2>
+        <p class="kicker">{{ t(realHardware ? 'Real ESP32 experiment' : 'Standalone simulation') }}</p>
+        <h2 id="algorithm-lab-title">{{ t('Student / Berry Algorithm Lab') }}</h2>
       </div>
-      <span class="runtime-badge">Berry 1.1.0 · {{ realHardware ? 'ESP32' : 'Web Worker' }}</span>
+      <span class="runtime-badge">Berry 1.1.0 · {{ realHardware ? 'ESP32' : t('Web Worker') }}</span>
     </header>
 
     <div class="lab-grid">
       <div class="editor-column">
-        <label for="berry-editor">Berry controller</label>
         <div class="task-note">
-          <strong>Your task:</strong> change the converter duty cycle so that <code>PV.getPower()</code>
-          becomes as large as possible. {{ realHardware ? 'The ESP32' : 'The simulator' }} calls <code>mppt()</code> every 100 ms.
+          <strong>{{ t('Your task:') }}</strong> {{ t('Change the converter duty cycle so that PV.getPower() becomes as large as possible.') }}
+          {{ t(realHardware ? 'The ESP32 calls mppt() every 100 ms.' : 'The simulator calls mppt() every 100 ms.') }}
         </div>
         <textarea
           id="berry-editor"
+          :aria-label="t('Berry code editor')"
           v-model="code"
           spellcheck="false"
           @input="scheduleCompile"
         />
         <div class="button-row">
-          <button @click="run">{{ realHardware ? 'Install & Run' : 'Run' }}</button>
-          <button @click="pause">Pause</button>
-          <button v-if="!realHardware" @click="request('step')">Single Step</button>
-          <button @click="reset">Reset</button>
+          <button @click="run">{{ t(realHardware ? 'Install & Run' : 'Run') }}</button>
+          <button @click="pause">{{ t('Pause') }}</button>
+          <button v-if="!realHardware" @click="request('step')">{{ t('Single Step') }}</button>
+          <button @click="reset">{{ t('Reset') }}</button>
           <button v-if="!realHardware" class="benchmark" :disabled="isBenchmarking" @click="benchmark">
-            {{ isBenchmarking ? 'Benchmarking…' : 'Benchmark' }}
+            {{ t(isBenchmarking ? 'Benchmarking…' : 'Benchmark') }}
           </button>
           <template v-else>
-            <label class="log-interval">Every
+            <label class="log-interval">{{ t('Every') }}
               <select v-model.number="loggingInterval" :disabled="logStatus.recording || loggingBusy">
-                <option :value="1">1 second</option>
-                <option :value="30">30 seconds</option>
-                <option :value="60">1 minute</option>
-                <option :value="300">5 minutes</option>
+                <option :value="1">{{ t('1 second') }}</option>
+                <option :value="30">{{ t('30 seconds') }}</option>
+                <option :value="60">{{ t('1 minute') }}</option>
+                <option :value="300">{{ t('5 minutes') }}</option>
               </select>
             </label>
             <button class="benchmark" :disabled="loggingBusy" @click="toggleLogging">
-              {{ logStatus.recording ? 'Stop logging' : 'Start logging' }}
+              {{ t(logStatus.recording ? 'Stop logging' : 'Start logging') }}
             </button>
           </template>
         </div>
 
         <section v-if="realHardware" class="logging-panel" aria-labelledby="logging-title">
-          <h3 id="logging-title">Experiment logging</h3>
-          <p>Record measured PV voltage/current, load voltage/current, and duty cycle to a CSV on the ESP32. A blank load value means its sensor was unavailable.</p>
-          <p>{{ logStatus.message || 'Choose an interval, then start logging.' }}
-            <span v-if="logStatus.recording"> Recording: {{ logStatus.active }}</span>
+          <h3 id="logging-title">{{ t('Experiment logging') }}</h3>
+          <p>{{ t('Record measured PV voltage/current, load voltage/current, and duty cycle to a CSV on the ESP32. A blank load value means its sensor was unavailable.') }}</p>
+          <p>{{ logStatus.message ? localizeMessage(logStatus.message) : t('Choose an interval, then start logging.') }}
+            <span v-if="logStatus.recording"> {{ t('Recording:') }} {{ logStatus.active }}</span>
           </p>
-          <p>{{ ((logStatus.usedBytes || 0) / 1048576).toFixed(2) }} / 4.00 MiB log budget used.
-            <a href="/downloads">Open recordings and download CSV files</a>.
+          <p>{{ ((logStatus.usedBytes || 0) / 1048576).toFixed(2) }} / 4.00 MiB {{ t('log budget used.') }}
+            <a href="/downloads">{{ t('Open recordings and download CSV files') }}</a>.
           </p>
-          <p class="important">A filesystem update can erase recordings. Download files you want to keep before updating.</p>
+          <p class="important">{{ t('A filesystem update can erase recordings. Download files you want to keep before updating.') }}</p>
         </section>
 
         <section v-if="!realHardware" class="benchmark-panel" aria-labelledby="benchmark-title">
-          <h3 id="benchmark-title">Benchmark</h3>
-          <p>
-            Your current program is tested through <strong>one complete daylight period</strong>,
-            from sunrise at 06:00 to sunset at 18:00. A clear-sky daylight envelope is
-            disturbed by slow cloud banks, minute-scale cloud edges, and second-scale fluctuations.
-            The simulation starts at 20% duty and calls <code>mppt()</code> at 10 Hz, exactly
-            432,000 times during the benchmark.
-          </p>
+          <h3 id="benchmark-title">{{ t('Benchmark') }}</h3>
+          <p>{{ t('Benchmark intro') }}</p>
           <figure class="benchmark-profile-chart">
-            <svg viewBox="0 0 720 165" role="img" aria-label="Irradiance from sunrise to sunset on a fluctuating benchmark day">
+            <svg viewBox="0 0 720 165" role="img" :aria-label="t('Irradiance from sunrise to sunset on a fluctuating benchmark day')">
               <line class="chart-axis" x1="42" y1="10" x2="42" y2="130" />
               <line class="chart-axis" x1="42" y1="130" x2="696" y2="130" />
               <line class="chart-grid" x1="42" y1="70" x2="696" y2="70" />
@@ -79,25 +73,19 @@
               <polyline v-for="profile in benchmarkProfiles" :key="profile.id" :class="['scenario-line', profile.className]" :points="profile.points" />
             </svg>
             <figcaption>
-              <span v-for="profile in benchmarkProfiles" :key="profile.id" :class="profile.className">{{ profile.label }}</span>
+              <span v-for="profile in benchmarkProfiles" :key="profile.id" :class="profile.className">{{ t(profile.label) }}</span>
             </figcaption>
           </figure>
-          <p>
-            Harvested energy is accumulated from panel power from sunrise to sunset and shown in
-            watt-hours (<strong>Wh</strong>; 1 Wh = 3600 J). The tracking score divides it by the
-            energy available from an ideal controller that remains at the maximum-power point.
-            A fixed duty may work during one irradiance level, but loses energy as the optimal
-            operating point moves throughout the day.
-          </p>
+          <p>{{ t('Benchmark explanation') }}</p>
 
           <div v-if="benchmarkRuns.length" class="benchmark-output" aria-live="polite">
-            <h4>Benchmark results</h4>
+            <h4>{{ t('Benchmark results') }}</h4>
             <dl>
               <div v-for="run in benchmarkRuns" :key="run.scenario">
                 <dt>{{ scenarioLabel(run.scenario) }}</dt>
                 <dd>
-                  <strong>{{ run.capturePercent.toFixed(2) }}% of available energy</strong> ·
-                  {{ joulesToWh(run.energyJ) }} Wh harvested / {{ joulesToWh(run.availableEnergyJ) }} Wh available
+                  <strong>{{ run.capturePercent.toFixed(2) }}% {{ t('of available energy') }}</strong> ·
+                  {{ joulesToWh(run.energyJ) }} {{ t('Wh harvested /') }} {{ joulesToWh(run.availableEnergyJ) }} {{ t('Wh available') }}
                 </dd>
               </div>
             </dl>
@@ -106,21 +94,9 @@
       </div>
 
       <aside class="lab-side">
-        <div v-if="!realHardware" class="simulation-inputs">
-          <label>Scenario
-            <select v-model="scenario" @change="updateEnvironment">
-              <option value="">Live sky controls</option>
-              <option value="clear-day">Clear day</option>
-              <option value="passing-cloud">Cloudy day with passing shadows</option>
-              <option value="uniform-shadow">Passing whole-panel shadows</option>
-              <option value="fluctuating-day">Synthetic cloudy PV day (06:00-18:00)</option>
-            </select>
-          </label>
-          <p class="fixed-load"><strong>Load:</strong> fixed 50 Ω, matching the real kit.</p>
-        </div>
-
         <section class="api-guide">
-          <h3>Firmware-compatible API</h3>
+          <h3>{{ t('Firmware-compatible API') }}</h3>
+          <p v-if="!realHardware" class="fixed-load"><strong>{{ t('Load') }}:</strong> {{ t('fixed 50 Ω, matching the real kit.') }}</p>
           <dl>
             <div><dt><code>PV.getVoltage()</code></dt><dd>{{ voltage.toFixed(2) }} V</dd></div>
             <div><dt><code>PV.getCurrent()</code></dt><dd>{{ current.toFixed(3) }} A</dd></div>
@@ -130,42 +106,42 @@
             <div><dt><code>load.getPower()</code></dt><dd>{{ loadPower.toFixed(2) }} W</dd></div>
             <div><dt><code>duty.get()</code></dt><dd>{{ duty.toFixed(3) }}</dd></div>
           </dl>
-          <p><code>duty.set(0.50)</code> chooses a duty directly. <code>duty.change(-0.01)</code> changes it relative to the current value.</p>
-          <p class="important"><strong>Buck rule:</strong> increasing duty lowers panel voltage; decreasing duty raises panel voltage.</p>
+          <p><code>duty.set(0.50)</code> {{ t('chooses a duty directly.') }} <code>duty.change(-0.01)</code> {{ t('changes it relative to the current value.') }}</p>
+          <p class="important"><strong>{{ t('Buck rule:') }}</strong> {{ t('increasing duty lowers panel voltage; decreasing duty raises panel voltage.') }}</p>
         </section>
 
         <section class="diagnostics" aria-live="polite">
-          <h3>Compile diagnostics</h3>
-          <p v-if="!diagnostics.length">Waiting for the interpreter…</p>
+          <h3>{{ t('Compile diagnostics') }}</h3>
+          <p v-if="!diagnostics.length">{{ t('Waiting for the interpreter…') }}</p>
           <p v-if="realHardware && berryHealthy === false" class="error">
-            No healthy Berry program is currently running on the ESP32. Install a valid program; runtime errors and timeouts stop PWM at minimum duty.
+            {{ t('No healthy Berry program is currently running on the ESP32. Install a valid program; runtime errors and timeouts stop PWM at minimum duty.') }}
           </p>
           <p v-for="(item, index) in diagnostics" :key="index" :class="item.severity">
-            {{ item.message }}
+            {{ localizeMessage(item.message) }}
           </p>
         </section>
 
         <section class="console-output">
           <div class="console-header">
-            <h3>Console</h3>
-            <label><input v-model="autoScroll" type="checkbox" /> Auto-scroll</label>
+            <h3>{{ t('Console') }}</h3>
+            <label><input v-model="autoScroll" type="checkbox" /> {{ t('Auto-scroll') }}</label>
           </div>
           <pre ref="consoleOutput">{{ consoleText }}</pre>
-          <p class="console-hint"><code>duty.change()</code> changes duty but prints nothing. Use <code>print(PV.getPower())</code> when you want console output.</p>
+          <p class="console-hint"><code>duty.change()</code> {{ t('changes duty but prints nothing. Use') }} <code>print(PV.getPower())</code> {{ t('when you want console output.') }}</p>
         </section>
 
         <details class="hints">
-          <summary>Hints and controls</summary>
+          <summary>{{ t('Hints and controls') }}</summary>
           <ol>
-            <li v-if="!realHardware"><strong>Single Step</strong> calls <code>mppt()</code> once. Watch the live API values and duty.</li>
-            <li v-else><strong>Install & Run</strong> compiles this program on the ESP32, preserves the previous valid program if compilation fails, then enters Auto mode.</li>
-            <li>If power increased, try another small change in the same direction.</li>
-            <li>If power decreased, reverse the direction of the duty change.</li>
-            <li><strong>Run</strong> repeats those steps; <strong>Pause</strong> freezes them; <strong>Reset</strong> clears Berry variables and restores the starting state.</li>
-            <li v-if="!realHardware"><strong>Benchmark</strong> runs the same program through every deterministic scenario and compares harvested energy.</li>
-            <li v-else><strong>Start logging</strong> records the real kit at the selected interval. Stop it before downloading the CSV.</li>
+            <li v-if="!realHardware"><strong>{{ t('Single Step') }}</strong> {{ t('calls mppt() once. Watch the live API values and duty.') }}</li>
+            <li v-else><strong>{{ t('Install & Run') }}</strong> {{ t('compiles this program on the ESP32, preserves the previous valid program if compilation fails, then enters Auto mode.') }}</li>
+            <li>{{ t('If power increased, try another small change in the same direction.') }}</li>
+            <li>{{ t('If power decreased, reverse the direction of the duty change.') }}</li>
+            <li><strong>{{ t('Run') }}</strong> {{ t('repeats those steps;') }} <strong>{{ t('Pause') }}</strong> {{ t('freezes them;') }} <strong>{{ t('Reset') }}</strong> {{ t('clears Berry variables and restores the starting state.') }}</li>
+            <li v-if="!realHardware"><strong>{{ t('Benchmark') }}</strong> {{ t('runs the same program through a deterministic cloudy day and compares harvested energy.') }}</li>
+            <li v-else><strong>{{ t('Start logging') }}</strong> {{ t('records the real kit at the selected interval. Stop it before downloading the CSV.') }}</li>
           </ol>
-          <p><strong>Uniform shadow is not partial shading.</strong> It reduces light over the whole panel and therefore has only one power maximum. Real partial shading can create multiple maxima because of cell strings and bypass diodes.</p>
+          <p><strong>{{ t('Uniform shadow is not partial shading.') }}</strong> {{ t('It reduces light over the whole panel and therefore has only one power maximum. Real partial shading can create multiple maxima because of cell strings and bypass diodes.') }}</p>
         </details>
 
       </aside>
@@ -176,6 +152,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue';
 import { BENCHMARK_SCENARIOS, SIMPLE_SCENARIOS, sampleScenario } from '../simulation/SimpleSimulation.js';
+import { locale, localizeMessage, t } from '../i18n.js';
 
 const emit = defineEmits(['command']);
 
@@ -202,19 +179,36 @@ const props = defineProps({
   realHardware: { type: Boolean, default: false },
   berryHealthy: { type: Boolean, default: null }
 });
-const code = ref(INITIAL_CODE);
+const starterCode = (language) => {
+  if (language === 'de') return INITIAL_CODE
+    .replace('# This uses the same student API as firmware/src/mppt_alg.cpp.', '# Dieselbe Schüler-API wie in firmware/src/mppt_alg.cpp.')
+    .replace('# mppt() is called every 100 ms. Complete the controller below.', '# mppt() wird alle 100 ms aufgerufen. Vervollständige den Regler.')
+    .replace('# TODO: use the measurements to decide whether duty should change.', '# TODO: Entscheide anhand der Messwerte, ob sich der Tastgrad ändern soll.')
+    .replace('# duty.change(0.01) changes it relative to the current value.', '# duty.change(0.01) ändert ihn relativ zum aktuellen Wert.')
+    .replace('# duty.set(0.50) chooses a new value directly.', '# duty.set(0.50) setzt einen neuen Wert direkt.');
+  if (language === 'es') return INITIAL_CODE
+    .replace('# This uses the same student API as firmware/src/mppt_alg.cpp.', '# La misma API para estudiantes que en firmware/src/mppt_alg.cpp.')
+    .replace('# mppt() is called every 100 ms. Complete the controller below.', '# mppt() se llama cada 100 ms. Completa el controlador.')
+    .replace('# TODO: use the measurements to decide whether duty should change.', '# TODO: usa las mediciones para decidir si debe cambiar el ciclo de trabajo.')
+    .replace('# duty.change(0.01) changes it relative to the current value.', '# duty.change(0.01) lo cambia respecto al valor actual.')
+    .replace('# duty.set(0.50) chooses a new value directly.', '# duty.set(0.50) establece directamente un valor nuevo.');
+  return INITIAL_CODE;
+};
+const code = ref(starterCode(locale.value));
+watch(locale, (next, previous) => {
+  if (code.value === starterCode(previous)) code.value = starterCode(next);
+});
 const diagnostics = ref([]);
 const benchmarkRuns = ref([]);
 const isBenchmarking = ref(false);
 const loggingInterval = ref(1);
 const loggingBusy = ref(false);
 const logStatus = ref({ recording: false, message: '', usedBytes: 0, active: '' });
-const scenario = ref('');
 const autoScroll = ref(true);
 const consoleOutput = ref(null);
 let compileTimer = null;
 
-const consoleText = computed(() => props.consoleLines.length ? props.consoleLines.join('\n') : 'Program output will appear here.');
+const consoleText = computed(() => props.consoleLines.length ? props.consoleLines.join('\n') : t('Program output will appear here.'));
 
 watch([() => props.consoleLines, autoScroll], () => {
   if (autoScroll.value && consoleOutput.value) {
@@ -301,18 +295,12 @@ async function toggleLogging() {
   }
 }
 
-function updateEnvironment() {
-  request('simulation', {
-    scenario: scenario.value,
-  }).catch(showError);
-}
-
 function joulesToWh(joules) {
   return (joules / 3600).toFixed(3);
 }
 
 function scenarioLabel(id) {
-  return SIMPLE_SCENARIOS.find((scenario) => scenario.id === id)?.label ?? id;
+  return t(SIMPLE_SCENARIOS.find((scenario) => scenario.id === id)?.label ?? id);
 }
 
 function showError(error) {
@@ -330,12 +318,12 @@ onMounted(() => {
 
 <style scoped>
 .algorithm-lab { width: min(1760px, 100%); margin: 14px auto 24px; padding: 18px; border: 1px solid #cbd8d3; border-radius: 8px; background: #fff; box-shadow: 0 14px 34px rgba(25, 39, 52, .08); }
-header, .button-row, .simulation-inputs label, .simulation-inputs label span { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+header, .button-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 header h2, header p, h3, h4 { margin: 0; }
 .kicker { color: #2f7f66; font-size: .76rem; font-weight: 850; text-transform: uppercase; }
 .runtime-badge { padding: 6px 10px; border-radius: 999px; background: #e4f4ec; color: #207652; font-size: .78rem; font-weight: 800; }
 .lab-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(300px, .8fr); gap: 16px; margin-top: 16px; }
-.editor-column, .lab-side, .simulation-inputs { display: grid; gap: 10px; align-content: start; }
+.editor-column, .lab-side { display: grid; gap: 10px; align-content: start; }
 textarea { width: 100%; min-height: 390px; resize: vertical; padding: 14px; border: 1px solid #9fafaa; border-radius: 6px; background: #17212b; color: #e8f1ed; font: 14px/1.55 ui-monospace, SFMono-Regular, Consolas, monospace; tab-size: 2; }
 .button-row { justify-content: flex-start; flex-wrap: wrap; }
 button { padding: 9px 13px; border: 1px solid #9fafaa; border-radius: 5px; background: #f8faf8; cursor: pointer; font-weight: 750; }
@@ -345,7 +333,7 @@ button:disabled { cursor: wait; opacity: .7; }
 .log-interval { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
 .log-interval select { width: auto; padding: 7px; }
 .logging-panel p { margin: 8px 0 0; line-height: 1.45; }
-.lab-side > section, .simulation-inputs, .benchmark-panel, .logging-panel { padding: 12px; border: 1px solid #dfe6e3; border-radius: 6px; background: #f8faf8; }
+.lab-side > section, .benchmark-panel, .logging-panel { padding: 12px; border: 1px solid #dfe6e3; border-radius: 6px; background: #f8faf8; }
 .task-note, .hints { padding: 10px 12px; border: 1px solid #cbd8d3; border-radius: 6px; background: #f4faf7; line-height: 1.5; }
 .api-guide dl { display: grid; gap: 5px; margin: 10px 0; }
 .api-guide dl div { display: flex; justify-content: space-between; gap: 12px; }
@@ -358,9 +346,6 @@ button:disabled { cursor: wait; opacity: .7; }
 .hints summary { cursor: pointer; font-weight: 850; }
 .hints ol { padding-left: 20px; line-height: 1.5; }
 code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
-.simulation-inputs label { align-items: flex-start; flex-direction: column; }
-.simulation-inputs label span, select { width: 100%; }
-.simulation-inputs input { flex: 1; }
 .diagnostics p { padding: 7px; border-radius: 4px; background: #e4f4ec; }
 .diagnostics p.error { background: #fde8e5; color: #8b3027; }
 .benchmark-panel > p { margin: 8px 0 0; line-height: 1.45; color: #46545f; }

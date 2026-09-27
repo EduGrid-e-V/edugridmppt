@@ -2,18 +2,18 @@
   <section class="graph-card">
     <header class="graph-header">
       <div>
-        <p class="graph-kicker">Panel characteristic</p>
-        <h3>I–V curve</h3>
+        <p class="graph-kicker">{{ t('Panel characteristic') }}</p>
+        <h3>{{ t('I–V curve') }}</h3>
       </div>
-      <div class="legend" aria-label="Chart legend">
-        <span><i class="dot live"></i>Live point</span>
-        <span v-if="hasSweep"><i class="line sweep"></i>Current</span>
-        <span v-if="hasSweep"><i class="line power"></i>Power</span>
+      <div class="legend" :aria-label="t('Chart legend')">
+        <span><i class="dot live"></i>{{ t('Live point') }}</span>
+        <span v-if="hasSweep"><i class="line sweep"></i>{{ t('Current') }}</span>
+        <span v-if="hasSweep"><i class="line power"></i>{{ t('Power') }}</span>
       </div>
     </header>
 
-    <div class="graph-frame">
-      <svg class="chart-svg" viewBox="0 0 640 420" preserveAspectRatio="none" role="img" aria-label="Voltage current characteristic chart">
+    <div ref="frameElement" class="graph-frame">
+      <svg class="chart-svg" :viewBox="`0 0 640 ${chartHeight}`" preserveAspectRatio="xMidYMid meet" role="img" :aria-label="t('Voltage current characteristic chart')">
         <rect class="plot-bg" :x="plot.x" :y="plot.y" :width="plot.width" :height="plot.height" rx="4" />
 
         <g class="grid">
@@ -57,15 +57,15 @@
         </g>
 
         <text v-if="!hasSweep" class="sweep-prompt" :x="plot.x + plot.width / 2" :y="plot.y + plot.height / 2" text-anchor="middle">
-          Press Start Sweep to measure the full I–V curve
+          {{ t('Press Start Sweep to measure the full I–V curve') }}
         </text>
 
-        <text class="axis-title x-title" :x="plot.x + plot.width / 2" y="402" text-anchor="middle">Voltage (V)</text>
-        <text class="axis-title y-title" transform="translate(18 205) rotate(-90)" text-anchor="middle">
-          Current (A)
+        <text class="axis-title x-title" :x="plot.x + plot.width / 2" :y="chartHeight - 12" text-anchor="middle">{{ t('Voltage (V)') }}</text>
+        <text class="axis-title y-title" :transform="`translate(18 ${(plot.y + plot.bottom) / 2}) rotate(-90)`" text-anchor="middle">
+          {{ t('Current (A)') }}
         </text>
-        <text class="axis-title power-title" transform="translate(626 205) rotate(90)" text-anchor="middle">
-          Power (W)
+        <text class="axis-title power-title" :transform="`translate(626 ${(plot.y + plot.bottom) / 2}) rotate(90)`" text-anchor="middle">
+          {{ t('Power (W)') }}
         </text>
       </svg>
     </div>
@@ -73,7 +73,8 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
+import { t } from '../i18n.js';
 
 const props = defineProps({
   voltage: { type: Number, required: true },
@@ -88,22 +89,44 @@ const maxSeen = ref({
   power: 0
 });
 const MAX_HISTORY = 42;
+const MIN_CURRENT_AXIS_A = 0.2;
+const MIN_POWER_AXIS_W = 2;
+const POWER_TICK_STEP_W = 0.5;
 const hasSweep = computed(() => props.sweepData?.length >= 2);
 
-const plot = {
-  x: 82,
-  y: 34,
-  width: 430,
-  height: 304,
-  right: 512,
-  bottom: 338
-};
+const frameElement = ref(null);
+const chartHeight = ref(450);
+const plot = reactive({
+  x: 78,
+  y: 18,
+  width: 460,
+  height: 367,
+  right: 538,
+  bottom: 385
+});
+let frameObserver;
+
+onMounted(() => {
+  if (typeof ResizeObserver === 'undefined' || !frameElement.value) return;
+  frameObserver = new ResizeObserver(([entry]) => {
+    const { width, height } = entry.contentRect;
+    if (width <= 0 || height <= 0) return;
+    const nextHeight = Math.max(450, Math.round(640 * height / width));
+    if (nextHeight === chartHeight.value) return;
+    chartHeight.value = nextHeight;
+    plot.bottom = nextHeight - 65;
+    plot.height = plot.bottom - plot.y;
+  });
+  frameObserver.observe(frameElement.value);
+});
+
+onUnmounted(() => frameObserver?.disconnect());
 
 const bounds = computed(() => {
   return {
     x: niceMax(maxSeen.value.voltage * 1.05, 1),
-    y: niceMax(maxSeen.value.current * 1.16, 0.1),
-    power: niceMax(maxSeen.value.power * 1.18, 1)
+    y: niceMax(Math.max(MIN_CURRENT_AXIS_A, maxSeen.value.current * 1.16), MIN_CURRENT_AXIS_A),
+    power: Math.ceil(Math.max(MIN_POWER_AXIS_W, maxSeen.value.power) / POWER_TICK_STEP_W) * POWER_TICK_STEP_W
   };
 });
 
@@ -115,13 +138,13 @@ const xTicks = computed(() => createTicks(bounds.value.x, 5).map((value) => ({
 
 const yTicks = computed(() => createTicks(bounds.value.y, 4).map((value) => ({
   value,
-  label: formatTick(value),
+  label: formatTick(value, bounds.value.y / 4),
   y: toY(value)
 })));
 
-const powerTicks = computed(() => createTicks(bounds.value.power, 4).map((value) => ({
+const powerTicks = computed(() => createTicks(bounds.value.power, Math.round(bounds.value.power / POWER_TICK_STEP_W)).map((value) => ({
   value,
-  label: formatTick(value),
+  label: formatTick(value, POWER_TICK_STEP_W),
   y: toPowerY(value)
 })));
 
@@ -212,11 +235,12 @@ function niceMax(value, fallback) {
   return niceFraction * scale;
 }
 
-function formatTick(value) {
+function formatTick(value, step = value) {
   const absoluteValue = Math.abs(value);
   if (absoluteValue >= 10 || value === 0) return value.toFixed(0);
   if (absoluteValue >= 1) return value.toFixed(1);
-  return value.toFixed(2);
+  const decimals = step >= 0.1 ? 1 : Math.max(2, Math.min(6, Math.ceil(-Math.log10(step))));
+  return value.toFixed(decimals);
 }
 
 function toPowerWatts(point) {
@@ -273,7 +297,7 @@ function recordMaxSeen(voltage, current, power) {
 .graph-card {
   display: flex;
   flex-direction: column;
-  min-height: 100%;
+  min-height: 0;
   gap: 0;
   padding: 0;
   border: 1px solid #d7e0df;

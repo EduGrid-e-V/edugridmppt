@@ -20,8 +20,11 @@ for (const required of ['Student / Berry Algorithm Lab', 'Install & Run', '/api/
 }
 
 const standalone = readFileSync(resolve('dist/edugrid-mppt.html'), 'utf8');
-for (const required of ['berry_compile', 'Student / Berry Algorithm Lab', 'Berry 1.1.0', 'Fractional open-circuit voltage', 'Fractional short-circuit current']) {
+for (const required of ['berry_compile', 'Student / Berry Algorithm Lab', 'Berry 1.1.0']) {
   if (!standalone.includes(required)) throw new Error(`Standalone build is missing: ${required}`);
+}
+for (const forbidden of ['Fractional open-circuit voltage', 'Fractional short-circuit current', 'FRACTIONAL_VOC', 'FRACTIONAL_ISC']) {
+  if (standalone.includes(forbidden)) throw new Error(`Standalone build contains removed algorithm: ${forbidden}`);
 }
 if (/<script[^>]+src=|<link[^>]+rel=["']stylesheet/.test(standalone)) {
   throw new Error('Standalone HTML contains an external script or stylesheet');

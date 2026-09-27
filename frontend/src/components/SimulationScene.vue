@@ -1,7 +1,7 @@
 <template>
-  <section class="simulation-panel" aria-label="PV simulation controls">
+  <section class="simulation-panel" :aria-label="t('PV simulation controls')">
     <div class="scene-wrap">
-      <svg class="scene-svg" viewBox="0 0 760 320" role="img" aria-label="Rooftop solar simulation">
+      <svg class="scene-svg" viewBox="0 0 760 320" role="img" :aria-label="t('Rooftop solar simulation')">
         <rect class="sky" x="0" y="0" width="760" height="320" rx="8" />
         <path class="sun-track" d="M -10 336 A 390 270 0 0 1 770 336" />
         <g class="sun" :transform="`translate(${sunCoordinates.x} ${sunCoordinates.y})`">
@@ -62,7 +62,7 @@
 
     <div class="simulation-controls">
       <label class="sim-control">
-        <span>Sun position</span>
+        <span>{{ t('Sun position') }}</span>
         <input
           type="range"
           min="0"
@@ -74,7 +74,7 @@
       </label>
 
       <label class="sim-control">
-        <span>Cloud cover</span>
+        <span>{{ t('Cloud cover') }}</span>
         <input
           type="range"
           min="0"
@@ -86,7 +86,7 @@
       </label>
 
       <label class="sim-control">
-        <span>Ambient temperature <output>{{ ambientC }} °C</output></span>
+        <span>{{ t('Ambient temperature') }} <output>{{ ambientC }} °C</output></span>
         <input
           type="range"
           min="-10"
@@ -97,13 +97,14 @@
         />
       </label>
 
-      <p class="fixed-load"><strong>Load:</strong> fixed at 50 Ω, matching the real kit.</p>
+      <p class="fixed-load"><strong>{{ t('Load') }}:</strong> {{ t('fixed at 50 Ω, matching the real kit.') }}</p>
     </div>
   </section>
 </template>
 
 <script setup>
 import { computed } from 'vue';
+import { t } from '../i18n.js';
 
 const props = defineProps({
   sunPosition: { type: Number, required: true },

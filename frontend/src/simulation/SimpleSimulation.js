@@ -1,10 +1,7 @@
-const DUTY_MIN = 0.02;
-const DUTY_MAX = 0.98;
+const DUTY_MIN = 0;
+const DUTY_MAX = 1;
 const CONVERTER_EFFICIENCY = 0.82;
 const PANEL_CURVE_SHAPE = 20;
-const FRACTIONAL_VOC_RATIO = Math.pow(1 / (PANEL_CURVE_SHAPE + 1), 1 / PANEL_CURVE_SHAPE);
-const FRACTIONAL_ISC_RATIO = 1 - Math.pow(FRACTIONAL_VOC_RATIO, PANEL_CURVE_SHAPE);
-const FRACTIONAL_SAMPLE_PERIOD_MS = 1000;
 const MPPT_DUTY_STEP = 0.01;
 
 const FLUCTUATING_DAY_SCENARIO = {
@@ -143,8 +140,6 @@ export class SimpleSimulation {
     this.algorithmElapsedMs = 0;
     this.previous = null;
     this.direction = 1;
-    this.fractionalReference = null;
-    this.fractionalSampleElapsedMs = FRACTIONAL_SAMPLE_PERIOD_MS;
     this.randomState = this.initialSeed;
     return this.emit(this.measure());
   }
@@ -175,6 +170,7 @@ export class SimpleSimulation {
   measure(duty = this.duty, withNoise = true) {
     const panel = this.panelState();
     const safeDuty = clamp(duty, DUTY_MIN, DUTY_MAX);
+    if (safeDuty === 0) return this.measureAtVoltage(panel.voc, panel, 0, false);
     const effectiveResistanceOhm = CONVERTER_EFFICIENCY * this.loadOhm / (safeDuty * safeDuty);
     const voltage = solveOperatingVoltage(panel, effectiveResistanceOhm);
     return this.measureAtVoltage(voltage, panel, safeDuty, withNoise);
@@ -206,21 +202,6 @@ export class SimpleSimulation {
     } else if (this.algorithm === 'PNO') {
       if (this.previous && frame.p < this.previous.p) this.direction *= -1;
       this.duty = clamp(this.duty + this.direction * MPPT_DUTY_STEP, DUTY_MIN, DUTY_MAX);
-    } else if (this.algorithm === 'FRACTIONAL_VOC' || this.algorithm === 'FRACTIONAL_ISC') {
-      this.fractionalSampleElapsedMs += this.algorithmPeriodMs;
-      if (this.fractionalReference === null || this.fractionalSampleElapsedMs >= FRACTIONAL_SAMPLE_PERIOD_MS) {
-        const panel = this.panelState();
-        this.fractionalReference = this.algorithm === 'FRACTIONAL_VOC'
-          ? FRACTIONAL_VOC_RATIO * panel.voc
-          : FRACTIONAL_ISC_RATIO * panel.isc;
-        this.fractionalSampleElapsedMs = 0;
-      }
-
-      const measurement = this.algorithm === 'FRACTIONAL_VOC' ? frame.v : frame.i;
-      const direction = this.algorithm === 'FRACTIONAL_VOC'
-        ? (measurement > this.fractionalReference ? 1 : -1)
-        : (measurement < this.fractionalReference ? 1 : -1);
-      this.duty = clamp(this.duty + direction * MPPT_DUTY_STEP, DUTY_MIN, DUTY_MAX);
     } else if (this.algorithm === 'INCCOND' && this.previous) {
       const dV = frame.v - this.previous.v;
       const dI = frame.i - this.previous.i;
@@ -245,7 +226,13 @@ export class SimpleSimulation {
   step() { const frame = this.measure(); this.runAlgorithm(frame); return this.emit(this.measure()); }
   emit(frame) { this.onFrame(frame); return frame; }
   setMode(mode) { this.mode = mode; this.previous = null; }
-  setAlgorithm(algorithm) { this.algorithm = algorithm; this.previous = null; this.fractionalReference = null; this.fractionalSampleElapsedMs = FRACTIONAL_SAMPLE_PERIOD_MS; }
+  setAlgorithm(algorithm) {
+    if (!['PNO', 'INCCOND', 'STUDENT'].includes(algorithm)) {
+      throw new RangeError(`Unknown MPPT algorithm: ${algorithm}`);
+    }
+    this.algorithm = algorithm;
+    this.previous = null;
+  }
   setDuty(duty) { this.duty = clamp(duty, DUTY_MIN, DUTY_MAX); this.previous = null; }
   setStudentFunction(fn) { this.studentFunction = typeof fn === 'function' ? fn : null; this.previous = null; }
   setSunPosition(value) { this.sunPosition = clamp(value, 0, 1); this.scenario = null; }

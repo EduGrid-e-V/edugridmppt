@@ -5,7 +5,7 @@ This is the browser dashboard for the EduGrid MPPT trainer. The same Vue source 
 - The firmware target is served by the ESP32 from LittleFS and talks to the firmware through WebSockets and HTTP endpoints.
 - The standalone target starts in simulation mode and includes the Berry Algorithm Lab in one offline HTML file.
 
-The built dashboard is intentionally self-contained. It should not rely on external CDNs because the ESP32 usually serves it from its own access point.
+The built dashboard is intentionally self-contained. It should not rely on external CDNs because the ESP32 usually serves it from its own access point. The header language selector switches the dashboard, charts, Berry guidance, and logging UI between English, German, and Spanish immediately. The initial language follows the browser locale; student-edited Berry code is never translated or overwritten. The same built-in translations ship in both firmware and standalone builds, with no runtime network request.
 
 ## Project Layout
 
@@ -22,7 +22,8 @@ frontend/
 
 Key services:
 
-- `src/simulation/SimpleSimulation.js` is the single model used by both frontend simulation paths. It represents the classroom panel as 13.5 V open circuit, 180 mA short circuit, and approximately 2 W maximum power, with a fixed 50 ohm load.
+- `src/simulation/SimpleSimulation.js` is the single model used by both frontend simulation paths. It represents the classroom panel as 13.5 V open circuit, 180 mA short circuit, and approximately 2 W maximum power, with a fixed 50 ohm load. Manual duty and Berry output span 0–100%; simulated
+  0% is the panel open-circuit state.
 - `src/services/MockConnector.js` is the small direct adapter used during local development; it delegates simulation to `SimpleSimulation`.
 - `src/workers/simulation.worker.js` owns the same model plus the real Berry 1.1.0 interpreter and benchmark in the standalone build.
 - `../packages/pv-sim` remains an independent, tested physics package, but is not used by this deliberately simple dashboard simulation.

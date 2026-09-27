@@ -2,21 +2,21 @@
   <section class="control-card">
     <div class="panel-header">
       <div>
-        <p class="section-kicker">Control bench</p>
-        <h2>Live Output</h2>
+        <p class="section-kicker">{{ t('Control bench') }}</p>
+        <h2>{{ t('Live Output') }}</h2>
       </div>
       <div class="badge" :class="mode === 'AUTO' ? 'badge-auto' : 'badge-manual'">
-        {{ mode }}
+        {{ t(mode) }}
       </div>
     </div>
 
-    <div class="measurement-groups" aria-label="Live measurements">
+    <div class="measurement-groups" :aria-label="t('Live measurements')">
       <section class="measurement-card panel-measurements" aria-labelledby="panel-measurements">
         <div class="measurement-card-title">
-          <h3 id="panel-measurements">Panel</h3>
-          <span>PV input</span>
+          <h3 id="panel-measurements">{{ t('Panel') }}</h3>
+          <span>{{ t('PV input') }}</span>
         </div>
-        <p class="preset-provenance"><strong>{{ presetLabel }}</strong> · {{ presetSource }}</p>
+        <p v-if="panelDescription" class="panel-description">{{ panelDescription }}</p>
         <dl class="reading-list">
           <div
             v-for="reading in panelReadings"
@@ -38,8 +38,8 @@
 
       <section class="measurement-card load-measurements" aria-labelledby="load-measurements">
         <div class="measurement-card-title">
-          <h3 id="load-measurements">Load</h3>
-          <span>Converter output</span>
+          <h3 id="load-measurements">{{ t('Load') }}</h3>
+          <span>{{ t('Converter output') }}</span>
         </div>
         <dl class="reading-list">
           <div
@@ -62,27 +62,27 @@
     </div>
 
     <div class="controls-section">
-      <div class="mode-selector" role="group" aria-label="Operating mode">
+      <div class="mode-selector" role="group" :aria-label="t('Operating mode')">
         <button 
           :class="{ active: mode === 'MANUAL' }" 
           @click="$emit('update:mode', 'MANUAL')"
-        >Manual</button>
+        >{{ t('Manual') }}</button>
         <button 
           :class="{ active: mode === 'AUTO' }" 
           @click="$emit('update:mode', 'AUTO')"
-        >Auto MPPT</button>
+        >{{ t('Auto MPPT') }}</button>
       </div>
 
       <div v-if="mode === 'MANUAL'" class="manual-input" :title="dutyCycleDescription">
         <div class="field-row">
-          <label for="duty" :title="dutyCycleDescription">Duty cycle</label>
+          <label for="duty" :title="dutyCycleDescription">{{ t('Duty cycle') }}</label>
           <output for="duty" :title="dutyCycleDescription">{{ (duty * 100).toFixed(0) }}%</output>
         </div>
         <input 
           id="duty"
           type="range" 
           min="0" 
-          max="0.95" 
+          max="1"
           step="0.01" 
           :value="duty" 
           :title="dutyCycleDescription"
@@ -93,16 +93,15 @@
 
       <div v-if="mode === 'AUTO'" class="auto-input">
         <div class="algo-options">
-          <label for="algorithm">Algorithm</label>
+          <label for="algorithm">{{ t('Algorithm') }}</label>
           <select id="algorithm" :value="algorithm" @change="$emit('update:algorithm', $event.target.value)">
             <option v-for="option in algorithmOptions" :key="option.id" :value="option.id">
               {{ option.label }}
             </option>
           </select>
         </div>
-        <p v-if="algorithmDescription" class="algorithm-description">{{ algorithmDescription }}</p>
         <button class="action-btn sweep" @click="$emit('trigger:sweep')">
-          Start Sweep
+          {{ t('Start Sweep') }}
         </button>
       </div>
     </div>
@@ -111,6 +110,7 @@
 
 <script setup>
 import { computed } from 'vue';
+import { t } from '../i18n.js';
 
 const props = defineProps({
   mode: String,
@@ -123,13 +123,12 @@ const props = defineProps({
   loadVoltage: Number,
   loadCurrent: Number,
   loadSensor: Boolean,
-  presetLabel: String,
-  presetSource: String,
+  panelDescription: String,
   algorithmOptions: {
     type: Array,
     default: () => [
-      { id: 'PNO', label: 'Perturb & Observe' },
-      { id: 'INCCOND', label: 'Incremental Conductance' }
+      { id: 'PNO', label: t('Perturb & Observe') },
+      { id: 'INCCOND', label: t('Incremental Conductance') }
     ]
   }
 })
@@ -139,57 +138,52 @@ defineEmits(['update:mode', 'update:algorithm', 'update:duty', 'trigger:sweep'])
 const panelReadings = computed(() => [
   {
     key: 'power',
-    label: 'Power',
+    label: t('Power'),
     value: formatMeasurement(props.power),
     unit: 'W',
-    description: 'Electrical power currently produced by the PV panel input.'
+    description: t('Electrical power currently produced by the PV panel input.')
   },
   {
     key: 'voltage',
-    label: 'Voltage',
+    label: t('Voltage'),
     value: formatMeasurement(props.voltage),
     unit: 'V',
-    description: 'Voltage measured at the PV panel side of the converter.'
+    description: t('Voltage measured at the PV panel side of the converter.')
   },
   {
     key: 'current',
-    label: 'Current',
+    label: t('Current'),
     value: formatMeasurement(props.current),
     unit: 'A',
-    description: 'Current flowing from the PV panel into the converter.'
+    description: t('Current flowing from the PV panel into the converter.')
   }
 ]);
 
 const loadReadings = computed(() => [
   {
     key: 'load-power',
-    label: 'Power',
+    label: t('Power'),
     value: formatLoadMeasurement(props.loadPower),
     unit: 'W',
-    description: 'Electrical power delivered to the load at the converter output.'
+    description: t('Electrical power delivered to the load at the converter output.')
   },
   {
     key: 'load-voltage',
-    label: 'Voltage',
+    label: t('Voltage'),
     value: formatLoadMeasurement(props.loadVoltage),
     unit: 'V',
-    description: 'Voltage measured at the load or output side of the converter.'
+    description: t('Voltage measured at the load or output side of the converter.')
   },
   {
     key: 'load-current',
-    label: 'Current',
+    label: t('Current'),
     value: formatLoadMeasurement(props.loadCurrent),
     unit: 'A',
-    description: 'Current flowing into the load from the converter output.'
+    description: t('Current flowing into the load from the converter output.')
   }
 ]);
 
-const dutyCycleDescription = 'Duty cycle is the fraction of each PWM period where the converter switch is on. Changing it changes the electrical load seen by the panel.';
-
-const algorithmDescription = computed(() => ({
-  FRACTIONAL_VOC: 'Samples the simulated open-circuit voltage once per second and targets 85.9% of it. Sampling is idealized and does not include switching loss.',
-  FRACTIONAL_ISC: 'Samples the simulated short-circuit current once per second and targets 95.2% of it. Sampling is idealized and does not include switching loss.'
-})[props.algorithm] ?? '');
+const dutyCycleDescription = computed(() => t('Duty cycle is the fraction of each PWM period where the converter switch is on. Changing it changes the electrical load seen by the panel.'));
 
 const formatMeasurement = (measurementValue) => {
   const numericMeasurement = Number(measurementValue);
@@ -203,7 +197,7 @@ const formatLoadMeasurement = (measurementValue) => {
 
 <style scoped>
 .control-card {
-  min-height: 100%;
+  min-height: 0;
   background: #ffffff;
   border-radius: 8px;
   padding: 14px;
@@ -297,7 +291,7 @@ const formatLoadMeasurement = (measurementValue) => {
   text-transform: uppercase;
 }
 
-.preset-provenance {
+.panel-description {
   margin: 0;
   color: #687483;
   font-size: 0.72rem;
@@ -486,13 +480,6 @@ output {
   display: flex;
   flex-direction: column;
   gap: 12px;
-}
-
-.algorithm-description {
-  margin: 0;
-  color: #5e6875;
-  font-size: 0.78rem;
-  line-height: 1.4;
 }
 
 .algo-options select {

@@ -2,7 +2,7 @@
   <section class="graph-card">
     <header class="graph-header">
       <div>
-        <p class="graph-kicker">Live response</p>
+        <p class="graph-kicker">{{ t('Live response') }}</p>
         <h3>{{ title }}</h3>
       </div>
       <div class="readout">
@@ -11,8 +11,8 @@
       </div>
     </header>
 
-    <div class="graph-frame">
-      <svg class="chart-svg" viewBox="0 0 640 420" preserveAspectRatio="none" role="img" aria-label="Power over time chart">
+    <div ref="frameElement" class="graph-frame">
+      <svg class="chart-svg" :viewBox="`0 0 640 ${chartHeight}`" preserveAspectRatio="xMidYMid meet" role="img" :aria-label="t('Power over time chart')">
         <rect class="plot-bg" :x="plot.x" :y="plot.y" :width="plot.width" :height="plot.height" rx="4" />
 
         <g class="grid">
@@ -39,9 +39,9 @@
           <circle r="5" :style="{ fill: color }" />
         </g>
 
-        <text class="axis-title x-title" x="342" y="402" text-anchor="middle">Time (s)</text>
-        <text class="axis-title y-title" transform="translate(18 205) rotate(-90)" text-anchor="middle">
-          Power (W)
+        <text class="axis-title x-title" x="342" :y="chartHeight - 12" text-anchor="middle">{{ t('Time (s)') }}</text>
+        <text class="axis-title y-title" :transform="`translate(18 ${(plot.y + plot.bottom) / 2}) rotate(-90)`" text-anchor="middle">
+          {{ t('Power (W)') }}
         </text>
       </svg>
     </div>
@@ -49,24 +49,44 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
+import { t } from '../i18n.js';
 
 const props = defineProps({
   data: { type: Array, default: () => [[], []] },
   title: { type: String, default: 'Power Over Time' },
   color: { type: String, default: '#d14b3f' },
   min: Number,
-  max: Number
+  max: { type: Number, default: 2.0 }
 });
 
-const plot = {
+const frameElement = ref(null);
+const chartHeight = ref(450);
+const plot = reactive({
   x: 82,
-  y: 34,
+  y: 18,
   width: 520,
-  height: 304,
+  height: 367,
   right: 602,
-  bottom: 338
-};
+  bottom: 385
+});
+let frameObserver;
+
+onMounted(() => {
+  if (typeof ResizeObserver === 'undefined' || !frameElement.value) return;
+  frameObserver = new ResizeObserver(([entry]) => {
+    const { width, height } = entry.contentRect;
+    if (width <= 0 || height <= 0) return;
+    const nextHeight = Math.max(450, Math.round(640 * height / width));
+    if (nextHeight === chartHeight.value) return;
+    chartHeight.value = nextHeight;
+    plot.bottom = nextHeight - 65;
+    plot.height = plot.bottom - plot.y;
+  });
+  frameObserver.observe(frameElement.value);
+});
+
+onUnmounted(() => frameObserver?.disconnect());
 
 const points = computed(() => {
   const times = props.data?.[0] || [];
@@ -84,24 +104,13 @@ const liveValue = computed(() => {
 
 const ranges = computed(() => {
   const visible = visiblePoints.value;
-  const values = visible.map((point) => point.value);
   const xMin = visible[0]?.time || 0;
   const xMax = Math.max(xMin + 10, visible[visible.length - 1]?.time || 10);
-  const measuredMax = Math.max(0, ...values);
-  const hasAxisMaximumFloor = props.max !== undefined;
-  const rawMax = hasAxisMaximumFloor
-    ? Math.max(props.max, measuredMax)
-    : Math.max(0.1, measuredMax);
-  const yMax = hasAxisMaximumFloor && measuredMax <= props.max
-    ? props.max
-    : niceMax(rawMax * 1.15);
-  const rawMin = props.min ?? Math.min(0, ...values);
-
   return {
     xMin,
     xMax,
-    yMin: Math.min(0, rawMin),
-    yMax
+    yMin: Math.min(0, props.min ?? 0),
+    yMax: props.max
   };
 });
 
@@ -124,7 +133,7 @@ const yTicks = computed(() => {
   const { yMin, yMax } = ranges.value;
   return createTicks(yMin, yMax, 4).map((value) => ({
     value,
-    label: formatTick(value),
+    label: formatTick(value, (yMax - yMin) / 4),
     y: toY(value)
   }));
 });
@@ -159,8 +168,9 @@ function toX(value) {
 
 function toY(value) {
   const { yMin, yMax } = ranges.value;
-  const span = Math.max(1, yMax - yMin);
-  return plot.bottom - ((Number(value) - yMin) / span) * plot.height;
+  const span = yMax - yMin;
+  const clamped = Math.min(yMax, Math.max(yMin, Number(value) || 0));
+  return plot.bottom - ((clamped - yMin) / span) * plot.height;
 }
 
 function pointsToPath(mappedPoints) {
@@ -173,15 +183,12 @@ function createTicks(min, max, count) {
   return Array.from({ length: count + 1 }, (_, index) => min + (span / count) * index);
 }
 
-function niceMax(value) {
-  if (value <= 10) return Math.ceil(value);
-  if (value <= 50) return Math.ceil(value / 5) * 5;
-  if (value <= 100) return Math.ceil(value / 10) * 10;
-  return Math.ceil(value / 25) * 25;
-}
-
-function formatTick(value) {
-  return Math.abs(value) >= 10 ? value.toFixed(0) : value.toFixed(1);
+function formatTick(value, step) {
+  if (Math.abs(value) >= 10) return value.toFixed(0);
+  const decimals = step < 0.1
+    ? Math.min(4, Math.max(2, Math.ceil(-Math.log10(step))))
+    : 1;
+  return value.toFixed(decimals);
 }
 
 function hexToRgba(hex, alpha) {
@@ -199,7 +206,7 @@ function hexToRgba(hex, alpha) {
 .graph-card {
   display: flex;
   flex-direction: column;
-  min-height: 100%;
+  min-height: 0;
   gap: 0;
   padding: 0;
   border: 1px solid #d7e0df;

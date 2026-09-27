@@ -2,6 +2,37 @@ import { describe, expect, it } from 'vitest';
 import { BENCHMARK_SCENARIOS, SimpleSimulation, SIMPLE_SCENARIOS, sampleScenario } from '../src/simulation/SimpleSimulation.js';
 
 describe('SimpleSimulation', () => {
+  it('accepts exact 0% and 100% duty with an open-circuit zero endpoint', () => {
+    const simulation = new SimpleSimulation({ noise: 0 });
+    simulation.setDuty(0);
+    expect(simulation.duty).toBe(0);
+    const openCircuit = simulation.measure(0, false);
+    expect(openCircuit.v).toBeCloseTo(simulation.panelState().voc, 12);
+    expect(openCircuit.i).toBe(0);
+    expect(openCircuit.loadP).toBe(0);
+
+    simulation.setDuty(1);
+    expect(simulation.duty).toBe(1);
+    const fullyOn = simulation.measure(1, false);
+    expect(fullyOn.v).toBeLessThan(openCircuit.v);
+    expect(fullyOn.i).toBeGreaterThan(0);
+
+    simulation.setDuty(-1);
+    expect(simulation.duty).toBe(0);
+    simulation.setDuty(2);
+    expect(simulation.duty).toBe(1);
+  });
+
+  it('lets student Berry control reach both duty endpoints', () => {
+    const simulation = new SimpleSimulation({ noise: 0 });
+    simulation.setAlgorithm('STUDENT');
+    simulation.setMode('AUTO');
+    simulation.setStudentFunction(() => 1);
+    expect(simulation.step().d).toBe(1);
+    simulation.setStudentFunction(() => 0);
+    expect(simulation.step().d).toBe(0);
+  });
+
   it('applies the student duty change in the current step', () => {
     const simulation = new SimpleSimulation({ noise: 0 });
     simulation.setMode('AUTO');
@@ -38,18 +69,16 @@ describe('SimpleSimulation', () => {
     expect(brightDuty).toBeGreaterThan(cloudDuty + 0.2);
   });
 
-  it.each(['FRACTIONAL_VOC', 'FRACTIONAL_ISC'])('%s converges near the modeled MPP', (algorithm) => {
-    const simulation = new SimpleSimulation({ noise: 0, tickMs: 50, algorithmPeriodMs: 100 });
-    simulation.setSunPosition(0.5);
-    simulation.setCloudCover(0);
-    simulation.setDuty(0.2);
-    simulation.setAlgorithm(algorithm);
-    simulation.setMode('AUTO');
-
-    for (let index = 0; index < 400; index += 1) simulation.tick();
-
-    expect(simulation.measure(simulation.duty, false).p / simulation.maximumPower()).toBeGreaterThan(0.98);
-    expect(simulation.fractionalReference).toBeGreaterThan(0);
+  it('rejects removed fractional MPPT algorithms without changing the active one', () => {
+    const simulation = new SimpleSimulation({ noise: 0 });
+    for (const algorithm of ['FRACTIONAL_VOC', 'FRACTIONAL_ISC']) {
+      expect(() => simulation.setAlgorithm(algorithm)).toThrow(RangeError);
+      expect(simulation.algorithm).toBe('PNO');
+    }
+    simulation.setAlgorithm('INCCOND');
+    expect(simulation.algorithm).toBe('INCCOND');
+    simulation.setAlgorithm('STUDENT');
+    expect(simulation.algorithm).toBe('STUDENT');
   });
 
   it('does not mistake a fixed 18 percent duty for full-sun MPPT', () => {
