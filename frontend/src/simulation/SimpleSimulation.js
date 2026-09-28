@@ -7,42 +7,8 @@ const MPPT_DUTY_STEP = 0.01;
 const FLUCTUATING_DAY_SCENARIO = {
   id: 'fluctuating-day',
   label: 'Synthetic cloudy PV day (06:00-18:00)',
-  durationS: 43200,
-  profile: 'synthetic-cloudy-day'
+  durationS: 43200
 };
-
-export const SIMPLE_SCENARIOS = [
-  { id: 'clear-day', label: 'Clear day', durationS: 1800, keyframes: [{ t: 0, irradiance: 0.08 }, { t: 900, irradiance: 1 }, { t: 1800, irradiance: 0.08 }] },
-  {
-    id: 'passing-cloud',
-    label: 'Cloudy day with passing shadows',
-    durationS: 1800,
-    keyframes: [
-      { t: 0, irradiance: 0.55 }, { t: 150, irradiance: 0.3 },
-      { t: 300, irradiance: 0.65 }, { t: 390, irradiance: 0.15, step: true },
-      { t: 570, irradiance: 0.15 }, { t: 660, irradiance: 0.5 },
-      { t: 810, irradiance: 0.25 }, { t: 990, irradiance: 0.7 },
-      { t: 1080, irradiance: 0.18, step: true }, { t: 1290, irradiance: 0.18 },
-      { t: 1410, irradiance: 0.55 }, { t: 1560, irradiance: 0.28 },
-      { t: 1680, irradiance: 0.62 }, { t: 1800, irradiance: 0.35 }
-    ]
-  },
-  {
-    id: 'uniform-shadow',
-    label: 'Passing whole-panel shadows',
-    durationS: 1800,
-    keyframes: [
-      { t: 0, irradiance: 0.85 }, { t: 210, irradiance: 0.85 },
-      { t: 270, irradiance: 0.28, step: true }, { t: 435, irradiance: 0.28 },
-      { t: 480, irradiance: 0.78, step: true }, { t: 675, irradiance: 0.78 },
-      { t: 690, irradiance: 0.18, step: true }, { t: 900, irradiance: 0.18 },
-      { t: 960, irradiance: 0.7, step: true }, { t: 1170, irradiance: 0.7 },
-      { t: 1260, irradiance: 0.32, step: true }, { t: 1470, irradiance: 0.32 },
-      { t: 1515, irradiance: 0.82, step: true }, { t: 1800, irradiance: 0.82 }
-    ]
-  },
-  FLUCTUATING_DAY_SCENARIO
-];
 
 export const BENCHMARK_SCENARIOS = [FLUCTUATING_DAY_SCENARIO];
 
@@ -81,18 +47,7 @@ function sampleCloudyDay(timeS, durationS) {
 }
 
 export function sampleScenario(scenario, timeS) {
-  const t = clamp(timeS, 0, scenario.durationS);
-  if (scenario.profile === 'synthetic-cloudy-day') return sampleCloudyDay(t, scenario.durationS);
-  let left = scenario.keyframes[0];
-  let right = left;
-  for (let index = 1; index < scenario.keyframes.length; index += 1) {
-    right = scenario.keyframes[index];
-    if (t < right.t) break;
-    left = right;
-  }
-  if (left === right || t >= right.t || right.step) return left.irradiance;
-  const fraction = (t - left.t) / (right.t - left.t);
-  return left.irradiance + fraction * (right.irradiance - left.irradiance);
+  return sampleCloudyDay(clamp(timeS, 0, scenario.durationS), scenario.durationS);
 }
 
 function panelCurrentAtVoltage(voltage, panel) {
@@ -238,8 +193,7 @@ export class SimpleSimulation {
   setSunPosition(value) { this.sunPosition = clamp(value, 0, 1); this.scenario = null; }
   setCloudCover(value) { this.cloudCover = clamp(value, 0, 1); this.scenario = null; }
   setAmbient(value) { this.ambientC = clamp(value, -10, 60); }
-  loadScenario(id) { const scenario = SIMPLE_SCENARIOS.find((candidate) => candidate.id === id); if (!scenario) throw new RangeError(`Unknown scenario: ${id}`); this.scenario = scenario; this.scenarioTimeS = 0; }
-  clearScenario() { this.scenario = null; this.scenarioTimeS = 0; }
+  loadScenario(id) { const scenario = BENCHMARK_SCENARIOS.find((candidate) => candidate.id === id); if (!scenario) throw new RangeError(`Unknown scenario: ${id}`); this.scenario = scenario; this.scenarioTimeS = 0; }
   maximumPower() {
     const panel = this.panelState();
     const normalizedVoltage = Math.pow(1 / (panel.curveShape + 1), 1 / panel.curveShape);

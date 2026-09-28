@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BENCHMARK_SCENARIOS, SimpleSimulation, SIMPLE_SCENARIOS, sampleScenario } from '../src/simulation/SimpleSimulation.js';
+import { BENCHMARK_SCENARIOS, SimpleSimulation, sampleScenario } from '../src/simulation/SimpleSimulation.js';
 
 describe('SimpleSimulation', () => {
   it('accepts exact 0% and 100% duty with an open-circuit zero endpoint', () => {
@@ -55,16 +55,16 @@ describe('SimpleSimulation', () => {
     expect(calls).toBe(10);
   });
 
-  it('moves the best duty as irradiance changes through the fixed load', () => {
+  it('moves the best duty as irradiance changes during the cloudy day', () => {
     const simulation = new SimpleSimulation({ noise: 0 });
-    simulation.loadScenario('passing-cloud');
+    simulation.loadScenario('fluctuating-day');
     const bestDuty = () => Array.from({ length: 97 }, (_, index) => 0.02 + index * 0.01)
       .map((duty) => ({ duty, power: simulation.measure(duty, false).p }))
       .reduce((best, point) => point.power > best.power ? point : best).duty;
 
-    simulation.scenarioTimeS = 300;
+    simulation.scenarioTimeS = 21600;
     const brightDuty = bestDuty();
-    simulation.scenarioTimeS = 450;
+    simulation.scenarioTimeS = 18000;
     const cloudDuty = bestDuty();
     expect(brightDuty).toBeGreaterThan(cloudDuty + 0.2);
   });
@@ -122,18 +122,20 @@ describe('SimpleSimulation', () => {
     expect(minuteSamples.at(-1)).toBe(0);
   });
 
-  it('samples scenario endpoints for the benchmark plot', () => {
-    const clearDay = SIMPLE_SCENARIOS.find(({ id }) => id === 'clear-day');
-    expect(sampleScenario(clearDay, 0)).toBeCloseTo(0.08, 12);
-    expect(sampleScenario(clearDay, 900)).toBeCloseTo(1, 12);
-    expect(sampleScenario(clearDay, 1800)).toBeCloseTo(0.08, 12);
+  it('accepts only the active cloudy-day profile', () => {
+    const simulation = new SimpleSimulation({ noise: 0 });
+    simulation.loadScenario('fluctuating-day');
+    expect(simulation.scenario.id).toBe('fluctuating-day');
+    for (const id of ['clear-day', 'passing-cloud', 'uniform-shadow']) {
+      expect(() => simulation.loadScenario(id)).toThrow(RangeError);
+    }
   });
 
-  it('replays scenarios deterministically', () => {
+  it('replays the cloudy-day profile deterministically', () => {
     const first = new SimpleSimulation({ noise: 0 });
     const second = new SimpleSimulation({ noise: 0 });
-    first.loadScenario('passing-cloud');
-    second.loadScenario('passing-cloud');
+    first.loadScenario('fluctuating-day');
+    second.loadScenario('fluctuating-day');
     for (let index = 0; index < 1200; index += 1) expect(first.tick()).toEqual(second.tick());
   });
 

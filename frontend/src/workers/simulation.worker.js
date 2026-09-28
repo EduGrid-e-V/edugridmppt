@@ -88,7 +88,6 @@ self.onmessage = async ({ data }) => {
       if (params.sunPosition !== undefined) engine.setSunPosition(params.sunPosition);
       if (params.cloudCover !== undefined) engine.setCloudCover(params.cloudCover);
       if (params.ambientC !== undefined) engine.setAmbient(params.ambientC);
-      if (Object.hasOwn(params, 'scenario')) params.scenario ? engine.loadScenario(params.scenario) : engine.clearScenario();
     } else if (command === 'sweep') {
       sweepData = engine.sweep();
       postMessage({ type: 'event', payload: { event: 'sweep_done' } });

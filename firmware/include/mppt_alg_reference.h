@@ -10,5 +10,5 @@
 /** @brief Clears the reference P&O algorithm's previous measurement. */
 void resetReferencePerturbObserve();
 
-/** @brief Runs one step of the teacher/demo reference P&O algorithm. */
+/** @brief Runs one step of the firmware P&O algorithm. */
 void runReferencePerturbObserve(const SolarPanelMeasurement& measurement);

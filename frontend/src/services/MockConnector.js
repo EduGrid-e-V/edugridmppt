@@ -18,10 +18,6 @@ export default class MockConnector {
       if (params.sunPosition !== undefined) this.engine.setSunPosition(params.sunPosition);
       if (params.cloudCover !== undefined) this.engine.setCloudCover(params.cloudCover);
       if (params.ambientC !== undefined) this.engine.setAmbient(params.ambientC);
-      if (Object.hasOwn(params, 'scenario')) {
-        if (params.scenario) this.engine.loadScenario(params.scenario);
-        else this.engine.clearScenario();
-      }
     } else if (command === 'sweep') {
       this.onData({ event: 'sweep_done' });
     }

@@ -63,7 +63,7 @@ Teacher pacing idea:
 - A suitable resistive load connected to the converter output.
 - USB power/programming cable and a computer with PlatformIO.
 - A notebook or this printed workbook.
-- For Experiment 8: an Arduino Nano ESP32 or ESP32-C3 build and a phone or laptop with WiFi.
+- For Experiment 8: an Arduino Nano ESP32 and a phone or laptop with WiFi.
 
 ### Safety notes
 
@@ -316,6 +316,10 @@ The last weakness explains why the passing-cloud failure in Experiment 4 matters
 
 **Goal:** translate the rule your group wrote in Experiment 3 into C++.
 
+**Current firmware:** this is an optional C++ source-code exercise. The standard P&O
+selection runs the built-in controller; use Student / Berry on the ESP32 dashboard
+to install and test your own algorithm on the kit.
+
 Open:
 
 ```text
@@ -357,15 +361,10 @@ duty.change(-smallDutyCycleStep);
 
 ### Important selection check
 
-The board starts in **Incremental Conductance** because `DEFAULT_MPPT_ALGORITHM` is `ALGO_INCCOND`. To run *your* algorithm, long-press the button for about 2 seconds to select P&O. The display shows which algorithm is active. Check it before concluding your code works.
-
-The normal student build has:
-
-```cpp
-#define USE_REFERENCE_PNO 0
-```
-
-This makes P&O selection run your student function. A teacher can set it to `1` for a reference demonstration, but that bypasses your code.
+The board starts in **Incremental Conductance** because `DEFAULT_MPPT_ALGORITHM` is `ALGO_INCCOND`.
+Selecting **P&O** runs the built-in reference controller, not the C++ TODO above.
+To run your own code on a Nano ESP32, select **Student / Berry** in the dashboard
+and install a Berry program. Editing the C++ TODO alone does not change the standard firmware.
 
 | Test | Expected behavior | Observed behavior | Change needed |
 | --- | --- | --- | --- |
@@ -468,21 +467,21 @@ The reference implementation is in `firmware/src/mppt_alg.cpp` outside the stude
 
 ## 11. Experiment 7: Compare The Two Algorithms
 
-**Goal:** compare your P&O rule and the reference Incremental Conductance algorithm under the same conditions.
+**Goal:** compare the built-in P&O and Incremental Conductance algorithms under the same conditions.
 
 ### Steps
 
-1. Use the display to confirm **P&O** is active and run your student algorithm.
+1. Use the display to confirm the built-in **P&O** algorithm is active.
 2. Make one repeatable light change and count how many control updates it takes to recover.
 3. Record oscillation or instability near the best point.
-4. Long-press the button for about 2 seconds to select **Incremental Conductance**.
+4. Long-press until **Incremental Conductance** appears (on ESP32, the next selection after P&O is Berry).
 5. Confirm the active algorithm on the display.
 6. Restore the starting conditions and repeat the same light change.
 7. Repeat each test more than once; a single noisy trial is weak evidence.
 
 | Algorithm | Fast to react? | Stable near maximum? | Confused by changing light? | Evidence |
 | --- | --- | --- | --- | --- |
-| Student P&O | | | | |
+| Built-in P&O | | | | |
 | Incremental Conductance | | | | |
 
 ### Questions
@@ -498,7 +497,7 @@ The reference implementation is in `firmware/src/mppt_alg.cpp` outside the stude
 
 **Goal:** compare live measurements, your manual results, and a full I–V/P–V sweep.
 
-### Nano ESP32 or ESP32-C3 steps
+### Nano ESP32 steps
 
 1. Build and upload the correct ESP32 environment from [Appendix C](#appendix-c-build-and-upload).
 2. Upload the LittleFS filesystem image.
@@ -614,7 +613,7 @@ An optional software IIR filter exists but is off by default:
 ### 13.6 Repository map
 
 ```text
-firmware/   Code for Arduino Nano, Nano ESP32, and ESP32-C3 Super Mini
+firmware/   Code for Arduino Nano and Nano ESP32
 frontend/   Source of the Nano ESP32 web dashboard
 hardware/   KiCad schematic and PCB files
 docs/       Learning material and diagrams
@@ -624,7 +623,7 @@ docs/       Learning material and diagrams
 | --- | --- |
 | `firmware/src/main.cpp` | Connects modules and schedules the main loop |
 | `firmware/src/mppt_alg.cpp` | Student MPPT workspace and reference IncCond |
-| `firmware/src/mppt_alg_reference.cpp` | Teacher/demo reference P&O |
+| `firmware/src/mppt_alg_reference.cpp` | Built-in P&O controller |
 | `firmware/include/mppt_alg.h` | Student-facing types and helpers |
 | `firmware/src/sensor_manager.cpp` | Reads INA226 voltage/current sensors |
 | `firmware/src/pwm_manager.cpp` | Generates PWM and stores duty cycle |
@@ -868,7 +867,7 @@ The WiFi name starts with `EduGrid_` and appends two hexadecimal characters from
 
 ## B.8 `mppt_alg.cpp`: student workspace
 
-The student function receives one `SolarPanelMeasurement` and can change duty through the short API. The distributed student section contains a TODO, not a completed P&O solution. Teacher/demo reference P&O lives in `firmware/src/mppt_alg_reference.cpp`.
+The student function receives one `SolarPanelMeasurement` and can change duty through the short API. The distributed student section contains a TODO, not a completed P&O solution. The standard P&O selection runs `firmware/src/mppt_alg_reference.cpp`; use Student / Berry to run a student algorithm on the Nano ESP32.
 
 ---
 
@@ -880,7 +879,6 @@ This project uses PlatformIO.
 | --- | --- |
 | `nanoatmega328new` | Classic Arduino Nano |
 | `arduino_nano_esp32` | Arduino Nano ESP32 |
-| `esp32_c3_super_mini` | ESP32-C3 Super Mini (breadboard only — pins differ from the PCB) |
 
 From `firmware/`:
 
@@ -913,8 +911,8 @@ The filesystem upload is required because the board serves dashboard assets from
 
 - Did the correct PlatformIO environment build and upload?
 - Is Serial Monitor set to `115200` baud?
-- Are you editing `firmware/src/mppt_alg.cpp`, not an old copy?
-- Is `USE_REFERENCE_PNO` set as intended?
+- For an ESP32 student program, did you install it with the dashboard's Student / Berry editor?
+- For built-in P&O, is P&O selected on the display or dashboard?
 
 ## Measurements
 

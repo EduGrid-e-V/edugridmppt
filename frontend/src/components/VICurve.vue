@@ -46,7 +46,7 @@
         <path v-if="historyPath" class="history-path" :d="historyPath" />
         <path v-if="powerHistoryPath" class="power-history-path" :d="powerHistoryPath" />
 
-        <g class="live-point" :transform="`translate(${livePoint.x} ${livePoint.y})`">
+        <g v-if="hasTelemetry" class="live-point" :transform="`translate(${livePoint.x} ${livePoint.y})`">
           <circle class="live-halo" r="15" />
           <circle class="live-dot" r="6" />
           <circle class="live-center" r="2.2" />
@@ -75,12 +75,14 @@
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { t } from '../i18n.js';
-import { POWER_TICK_STEP_W, formatPowerTick, powerAxisMaximum } from './chartAxes.js';
+import { MIN_POWER_AXIS_W, POWER_TICK_STEP_W, REAL_MIN_POWER_AXIS_W, REAL_POWER_TICK_STEP_W, formatPowerTick, powerAxisMaximum } from './chartAxes.js';
 
 const props = defineProps({
   voltage: { type: Number, required: true },
   current: { type: Number, required: true },
-  sweepData: { type: Array, default: () => [] }
+  realHardware: { type: Boolean, default: false },
+  sweepData: { type: Array, default: () => [] },
+  hasTelemetry: { type: Boolean, default: true }
 });
 
 const history = ref([]);
@@ -91,6 +93,9 @@ const maxSeen = ref({
 });
 const MAX_HISTORY = 42;
 const MIN_CURRENT_AXIS_A = 0.2;
+const REAL_MIN_CURRENT_AXIS_A = 0.05;
+const REAL_CURRENT_TICK_STEP_A = 0.01;
+const powerTickStepW = computed(() => props.realHardware ? REAL_POWER_TICK_STEP_W : POWER_TICK_STEP_W);
 const MIN_VOLTAGE_AXIS_V = 20;
 const VOLTAGE_TICK_STEP_V = 5;
 const hasSweep = computed(() => props.sweepData?.length >= 2);
@@ -124,10 +129,13 @@ onMounted(() => {
 onUnmounted(() => frameObserver?.disconnect());
 
 const bounds = computed(() => {
+  const minimumCurrentA = props.realHardware ? REAL_MIN_CURRENT_AXIS_A : MIN_CURRENT_AXIS_A;
   return {
     x: Math.ceil(Math.max(MIN_VOLTAGE_AXIS_V, maxSeen.value.voltage) / VOLTAGE_TICK_STEP_V) * VOLTAGE_TICK_STEP_V,
-    y: niceMax(Math.max(MIN_CURRENT_AXIS_A, maxSeen.value.current * 1.16), MIN_CURRENT_AXIS_A),
-    power: powerAxisMaximum(maxSeen.value.power)
+    y: props.realHardware
+      ? Math.ceil(Math.max(minimumCurrentA, maxSeen.value.current * 1.16) / REAL_CURRENT_TICK_STEP_A) * REAL_CURRENT_TICK_STEP_A
+      : niceMax(Math.max(minimumCurrentA, maxSeen.value.current * 1.16), minimumCurrentA),
+    power: powerAxisMaximum(maxSeen.value.power, props.realHardware ? REAL_MIN_POWER_AXIS_W : MIN_POWER_AXIS_W, powerTickStepW.value)
   };
 });
 
@@ -137,15 +145,15 @@ const xTicks = computed(() => createTicks(bounds.value.x, Math.round(bounds.valu
   x: toX(value)
 })));
 
-const yTicks = computed(() => createTicks(bounds.value.y, 4).map((value) => ({
+const yTicks = computed(() => createTicks(bounds.value.y, props.realHardware ? Math.round(bounds.value.y / REAL_CURRENT_TICK_STEP_A) : 4).map((value) => ({
   value,
-  label: formatTick(value, bounds.value.y / 4),
+  label: formatTick(value, props.realHardware ? REAL_CURRENT_TICK_STEP_A : bounds.value.y / 4),
   y: toY(value)
 })));
 
-const powerTicks = computed(() => createTicks(bounds.value.power, Math.round(bounds.value.power / POWER_TICK_STEP_W)).map((value) => ({
+const powerTicks = computed(() => createTicks(bounds.value.power, Math.round(bounds.value.power / powerTickStepW.value)).map((value) => ({
   value,
-  label: formatPowerTick(value),
+  label: formatPowerTick(value, powerTickStepW.value),
   y: toPowerY(value)
 })));
 

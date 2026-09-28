@@ -24,7 +24,8 @@ void setupPWM() {
 #else
   // AVR (Nano) PWM Setup
   pinMode(GATE_PIN, OUTPUT);
-  
+  digitalWrite(GATE_PIN, LOW);
+
   // Clear Timer1 control registers
   TCCR1A = 0;
   TCCR1B = 0;
@@ -34,9 +35,8 @@ void setupPWM() {
   TCCR1A |= _BV(WGM10);
   TCCR1B |= _BV(WGM12);
   
-  // Set Non-inverting mode on OC1A (D9):
-  // Clear OC1A on Compare Match, set OC1A at BOTTOM (non-inverting mode).
-  TCCR1A |= _BV(COM1A1);
+  // Leave OC1A disconnected at 0% so the gate is truly low. In Fast PWM,
+  // OCR1A=0 alone would otherwise produce a narrow pulse each cycle.
   
   // Set Prescaler to 1 (No prescaling)
   // Frequency = F_CPU / (Prescaler * 256) = 16MHz / 256 = 62.5kHz (Wait, Fast PWM 8-bit is F_CPU/256?)
@@ -79,7 +79,13 @@ void setDuty(float d) {
   ledcWrite(0, pwm);
 #endif
 #else
-  OCR1A = pwm; // Write duty to OC1A (D9)
+  if (pwm == 0) {
+    TCCR1A &= ~_BV(COM1A1); // Disconnect timer output at 0%.
+    digitalWrite(GATE_PIN, LOW);
+  } else {
+    OCR1A = pwm; // OCR1A=255 is continuously high in non-inverting Fast PWM.
+    TCCR1A |= _BV(COM1A1);
+  }
 #endif
   _last_pwm_change = millis();
 }

@@ -124,6 +124,7 @@ const props = defineProps({
   loadCurrent: Number,
   loadSensor: Boolean,
   panelDescription: String,
+  hasTelemetry: { type: Boolean, default: true },
   algorithmOptions: {
     type: Array,
     default: () => [
@@ -186,6 +187,7 @@ const loadReadings = computed(() => [
 const dutyCycleDescription = computed(() => t('Duty cycle is the fraction of each PWM period where the converter switch is on. Changing it changes the electrical load seen by the panel.'));
 
 const formatMeasurement = (measurementValue) => {
+  if (!props.hasTelemetry) return '--';
   const numericMeasurement = Number(measurementValue);
   return Number.isFinite(numericMeasurement) ? numericMeasurement.toFixed(2) : '--';
 };
@@ -292,6 +294,7 @@ const formatLoadMeasurement = (measurementValue) => {
 }
 
 .panel-description {
+  min-height: 2.7em;
   margin: 0;
   color: #687483;
   font-size: 0.72rem;
@@ -373,6 +376,10 @@ const formatLoadMeasurement = (measurementValue) => {
 }
 
 .reading-row dd span {
+  min-width: 5ch;
+  min-height: 1.2em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
   color: #17212b;
   font-size: 1.18rem;
   font-weight: 850;

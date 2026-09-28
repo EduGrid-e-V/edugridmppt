@@ -90,7 +90,7 @@ The generated file is `frontend/dist/edugrid-mppt.html`. It contains its scripts
 
 `frontend/dist/edugrid-mppt.html` is generated output. Never edit it manually.
 
-The simulated sweep is intentionally broader than a hardware sweep: it samples the complete model curve from 0 V/short circuit through 13.5 V/open circuit. Live operation still uses the fixed 50 ohm classroom load. The deterministic “uniform shadow” scenario reduces irradiance uniformly and is not a partial-shading or multi-peak model.
+The simulated sweep is intentionally broader than a hardware sweep: it samples the complete model curve from 0 V/short circuit through 13.5 V/open circuit. Live operation still uses the fixed 50 ohm classroom load. The synthetic cloudy-day benchmark varies the whole panel's irradiance; it does not simulate cell-level partial shading or multiple power peaks.
 
 ## Upload To The Device
 

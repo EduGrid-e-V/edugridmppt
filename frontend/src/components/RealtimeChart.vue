@@ -7,7 +7,7 @@
       </div>
       <div class="readout">
         <span class="readout-dot" :style="{ background: color }"></span>
-        {{ liveValue !== null ? liveValue.toFixed(1) : '0.0' }} W
+        {{ liveLabel }} W
       </div>
     </header>
 
@@ -51,19 +51,22 @@
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { t } from '../i18n.js';
-import { POWER_TICK_STEP_W, formatPowerTick, powerAxisMaximum } from './chartAxes.js';
+import { MIN_POWER_AXIS_W, POWER_TICK_STEP_W, REAL_MIN_POWER_AXIS_W, REAL_POWER_TICK_STEP_W, formatPowerTick, powerAxisMaximum } from './chartAxes.js';
 
 const props = defineProps({
   data: { type: Array, default: () => [[], []] },
   title: { type: String, default: 'Power Over Time' },
   color: { type: String, default: '#d14b3f' },
   min: Number,
-  max: { type: Number, default: 2.0 }
+  max: Number,
+  realHardware: { type: Boolean, default: false }
 });
 
 const frameElement = ref(null);
 const chartHeight = ref(450);
 const maximumSeenW = ref(0);
+const powerTickStepW = computed(() => props.realHardware ? REAL_POWER_TICK_STEP_W : POWER_TICK_STEP_W);
+const minimumPowerAxisW = computed(() => props.realHardware ? REAL_MIN_POWER_AXIS_W : MIN_POWER_AXIS_W);
 const plot = reactive({
   x: 82,
   y: 18,
@@ -113,6 +116,10 @@ const liveValue = computed(() => {
   if (!points.value.length) return null;
   return points.value[points.value.length - 1].value;
 });
+const liveLabel = computed(() => {
+  if (props.realHardware && liveValue.value === null) return '--';
+  return (liveValue.value ?? 0).toFixed(props.realHardware ? 2 : 1);
+});
 
 const ranges = computed(() => {
   const visible = visiblePoints.value;
@@ -122,7 +129,7 @@ const ranges = computed(() => {
     xMin,
     xMax,
     yMin: Math.min(0, props.min ?? 0),
-    yMax: powerAxisMaximum(maximumSeenW.value, props.max)
+    yMax: powerAxisMaximum(maximumSeenW.value, props.max ?? minimumPowerAxisW.value, powerTickStepW.value)
   };
 });
 
@@ -143,9 +150,9 @@ const xTicks = computed(() => {
 
 const yTicks = computed(() => {
   const { yMin, yMax } = ranges.value;
-  return createTicks(yMin, yMax, Math.round((yMax - yMin) / POWER_TICK_STEP_W)).map((value) => ({
+  return createTicks(yMin, yMax, Math.round((yMax - yMin) / powerTickStepW.value)).map((value) => ({
     value,
-    label: formatPowerTick(value),
+    label: formatPowerTick(value, powerTickStepW.value),
     y: toY(value)
   }));
 });

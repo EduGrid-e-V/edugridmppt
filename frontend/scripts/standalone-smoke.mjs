@@ -42,10 +42,52 @@ try {
   }, null, { timeout: 10_000 });
 
   if (await page.locator('#panel-preset').count()) throw new Error('Obsolete panel dropdown is visible in simulation mode');
+  const chartHeight = () => page.locator('.power-panel').evaluate((card) => card.getBoundingClientRect().height);
+  const readingSize = () => page.locator('.panel-measurements .reading-row.voltage dd span')
+    .evaluate((value) => {
+      const bounds = value.getBoundingClientRect();
+      return { width: bounds.width, height: bounds.height };
+    });
+  const simulationHeight = await chartHeight();
+  const simulationReadingSize = await readingSize();
   await page.getByRole('button', { name: 'Real', exact: true }).click();
   await page.getByText('Real ESP32 board').waitFor();
-  if (await page.locator('#panel-preset, .preset-warning, .panel-description').count()) {
+  if (await page.locator('#panel-preset, .preset-warning').count()) {
     throw new Error('Obsolete comparison panel is visible in real mode');
+  }
+  await page.getByText('No ESP32 data. Connect to EduGrid Wi-Fi and open 192.168.4.1.').waitFor();
+  const realScale = await page.evaluate(() => ({
+    current: [...document.querySelectorAll('.vi-panel .grid > g')]
+      .filter((group) => {
+        const line = group.querySelector('line');
+        return line?.getAttribute('y1') === line?.getAttribute('y2');
+      })
+      .map((group) => group.querySelector('text')?.textContent.trim()),
+    curvePower: [...document.querySelectorAll('.vi-panel .power-scale text')]
+      .map((label) => label.textContent.trim()),
+    historyPower: [...document.querySelectorAll('.power-panel .grid > g')]
+      .filter((group) => {
+        const line = group.querySelector('line');
+        return line?.getAttribute('y1') === line?.getAttribute('y2');
+      })
+      .map((group) => group.querySelector('text')?.textContent.trim()),
+  }));
+  const realCurrent = ['0', '0.01', '0.02', '0.03', '0.04', '0.05'];
+  const realPower = ['0', '0.05', '0.10', '0.15', '0.20', '0.25'];
+  if (JSON.stringify(realScale.current) !== JSON.stringify(realCurrent) ||
+      JSON.stringify(realScale.curvePower) !== JSON.stringify(realPower) ||
+      JSON.stringify(realScale.historyPower) !== JSON.stringify(realPower)) {
+    throw new Error(`Real charts use the wrong default scale: ${JSON.stringify(realScale)}`);
+  }
+  const offlineReadings = await page.locator('.panel-measurements .reading-row dd span').allTextContents();
+  if (offlineReadings.some((value) => value !== '--')) {
+    throw new Error('Offline Real mode must not display zeros as measurements');
+  }
+  if (Math.abs((await chartHeight()) - simulationHeight) > 2) throw new Error('Real and Simulation chart heights differ');
+  const realReadingSize = await readingSize();
+  if (Math.abs(realReadingSize.width - simulationReadingSize.width) > 1 ||
+      Math.abs(realReadingSize.height - simulationReadingSize.height) > 1) {
+    throw new Error('Missing Real reading changes the numeric field size');
   }
   await page.getByRole('button', { name: 'Sim', exact: true }).click();
   await page.waitForFunction(() => Number(document.querySelector('.reading-row.voltage dd span')?.textContent) > 0);
@@ -55,8 +97,6 @@ try {
   if (await page.locator('.sweep-path').count()) throw new Error('I-V sweep is visible before Start Sweep');
   await page.getByRole('button', { name: 'Simulation controls' }).click();
   await page.getByText('Ambient temperature').waitFor();
-
-  const chartHeight = () => page.locator('.power-panel').evaluate((card) => card.getBoundingClientRect().height);
   const manualChartHeight = await chartHeight();
   await page.getByRole('button', { name: 'Auto MPPT' }).click();
   await page.locator('#algorithm option').first().waitFor({ state: 'attached' });
@@ -83,6 +123,28 @@ try {
   await page.locator('.benchmark-profile-chart').waitFor();
   if (await page.locator('.benchmark-profile-chart polyline').count() !== 1) throw new Error('Daylight benchmark plot is incomplete');
   await page.getByText('Berry program compiled successfully.').waitFor({ timeout: 10_000 });
+  const actionStyle = (locator) => locator.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      background: style.backgroundColor,
+      border: style.borderTopColor,
+      color: style.color,
+      fontSize: style.fontSize
+    };
+  });
+  const sweepButton = page.locator('.action-btn.sweep');
+  const benchmarkButton = page.getByRole('button', { name: 'Benchmark', exact: true });
+  await page.mouse.move(0, 0);
+  const sweepIdle = await actionStyle(sweepButton);
+  const benchmarkIdle = await actionStyle(benchmarkButton);
+  await sweepButton.hover();
+  const sweepHover = await actionStyle(sweepButton);
+  await benchmarkButton.hover();
+  const benchmarkHover = await actionStyle(benchmarkButton);
+  if (JSON.stringify(sweepIdle) !== JSON.stringify(benchmarkIdle) ||
+      JSON.stringify(sweepHover) !== JSON.stringify(benchmarkHover)) {
+    throw new Error(`Benchmark styling differs from Start Sweep: ${JSON.stringify({ sweepIdle, benchmarkIdle, sweepHover, benchmarkHover })}`);
+  }
 
   const editor = page.locator('#berry-editor');
   const validProgram = await editor.inputValue();

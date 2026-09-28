@@ -20,26 +20,12 @@
 #define INA_AVERAGE_MODE 2    /** @brief INA226 averaging: 0=1, 1=4, 2=16, 3=64, ... 7=1024 samples. */
 #define INA_CONVERSION_TIME_MODE 4 /** @brief INA226 conversion time: 4=1100us for bus and shunt. */
 
-#if defined(EDUGRID_ESP32_C3_SUPER_MINI)
-    // ESP32-C3 Super Mini test board.
-    // PlatformIO uses the compatible lolin_c3_mini board definition for USB CDC.
-    // Reassign these pins for the next EduGrid PCB revision.
-    #define GATE_PIN        3
-    #define BTN_PIN         2
-    #define POT_PIN         A0
-    #define ENABLE_WIFI_DASHBOARD 1
-
-    // WiFi Settings
-    #define WIFI_SSID_PREFIX "EduGrid_"
-    #define WEB_PORT         80
-    #define CAPTIVE_DNS_PORT 53
-
-#elif defined(ARDUINO_NANO_ESP32) || defined(ARDUINO_ARDUINO_NANO_ESP32)
+#if defined(ARDUINO_NANO_ESP32) || defined(ARDUINO_ARDUINO_NANO_ESP32)
     // Arduino Nano ESP32 (S3) - Drop-in replacement for Nano
     // Uses the Arduino Pin Definitions to map to the correct physical location
-    #define GATE_PIN        8  /** Nano ESP32 D5 maps to ESP32-S3 GPIO8. */
-    #define BTN_PIN         6  /** Nano ESP32 D3 maps to ESP32-S3 GPIO6. */
-    #define POT_PIN         14 /** Nano ESP32 A7 maps to ESP32-S3 GPIO14. */
+    #define GATE_PIN        D5  /** Nano ESP32 D5 maps to ESP32-S3 GPIO8. */
+    #define BTN_PIN         D3  /** Nano ESP32 D3 maps to ESP32-S3 GPIO6. */
+    #define POT_PIN         A7 /** Nano ESP32 A7 maps to ESP32-S3 GPIO14. */
     #define ENABLE_WIFI_DASHBOARD 1
     
     // WiFi Settings
@@ -68,14 +54,12 @@
 
 // ================= PWM SETTINGS =================
 #define PWM_MIN_DUTY    0.0f    /** @brief Minimum allowed PWM duty cycle (0.0 to 1.0). */
-#define PWM_MAX_DUTY    0.98f   /** @brief Maximum allowed PWM duty cycle (0.0 to 1.0). */
+#define PWM_MAX_DUTY    1.0f   /** @brief Maximum allowed PWM duty cycle (0.0 to 1.0). */
 
 // ================= MPPT ALGORITHM SETTINGS =================
 #define ALGO_INCCOND    0 /** @brief Identifier for the Incremental Conductance algorithm. */
 #define ALGO_PNO        1 /** @brief Identifier for the Perturb & Observe algorithm. */
 #define DEFAULT_MPPT_ALGORITHM  ALGO_INCCOND /** @brief Default MPPT Algorithm. */
-/** @brief Run the reference P&O instead of the student algorithm (teacher/demo use). */
-#define USE_REFERENCE_PNO 0
 
 #define MPPT_PERIOD_MS  100      /** @brief Time interval between MPPT updates in milliseconds. */ // 10 Hz MPPT loop
 #define DUTY_STEP_MIN   0.002f   /** @brief Minimum step size for duty cycle adjustment. */

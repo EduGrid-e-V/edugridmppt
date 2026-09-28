@@ -1,9 +1,8 @@
 /**
  * @file mppt_alg_reference.cpp
- * @brief Teacher/demo reference implementation of Perturb and Observe.
+ * @brief Firmware implementation of Perturb and Observe.
  *
- * Students should derive and implement their own rule in mppt_alg.cpp before
- * reading this file. Set USE_REFERENCE_PNO to 1 for a demonstration build.
+ * The dashboard's P&O selection always runs this controller.
  */
 
 #include "mppt_alg_reference.h"

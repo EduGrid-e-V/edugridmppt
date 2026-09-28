@@ -94,6 +94,7 @@
         :loadVoltage="loadVoltage"
         :loadCurrent="loadCurrent"
         :loadSensor="loadSensor"
+        :hasTelemetry="experimentSource === 'simulation' || hasTelemetry"
         :algorithmOptions="algorithmOptions"
         :panelDescription="panelDescription"
         @update:mode="setMode"
@@ -107,6 +108,8 @@
         class="vi-panel"
         :voltage="voltage"
         :current="current"
+        :realHardware="experimentSource === 'real'"
+        :hasTelemetry="experimentSource === 'simulation' || hasTelemetry"
         :sweepData="visibleCurveData"
       />
 
@@ -115,6 +118,7 @@
         :title="t('Power Over Time')"
         color="#d14b3f"
         :data="powerChartData"
+        :realHardware="experimentSource === 'real'"
       />
     </section>
 
@@ -157,6 +161,7 @@ const loadVoltage = ref(0);
 const loadCurrent = ref(0);
 const loadPower = ref(0);
 const loadSensor = ref(false);
+const hasTelemetry = ref(false);
 const duty = ref(0);
 const mode = ref('MANUAL');
 const algorithm = ref('PNO');
@@ -199,7 +204,9 @@ const connectionLabel = computed(() => {
 
 const panelDescription = computed(() => experimentSource.value === 'simulation'
   ? `${t('EduGrid kit (~2 W)')} · ${t('Simple real-kit simulation: 13.5 V, 0.18 A, approximately 2 W')}`
-  : '');
+  : t(isConnected.value
+    ? 'Live measurements from the ESP32 board.'
+    : 'No ESP32 data. Connect to EduGrid Wi-Fi and open 192.168.4.1.'));
 
 const visibleCurveData = computed(() => sweepHasRun.value ? sweepCurveData.value : []);
 
@@ -211,6 +218,7 @@ const resetDashboardData = () => {
   loadCurrent.value = 0;
   loadPower.value = 0;
   loadSensor.value = false;
+  hasTelemetry.value = false;
   berryHealthy.value = null;
   sweepCurveData.value = [];
   sweepHasRun.value = false;
@@ -230,6 +238,7 @@ const handleData = (data) => {
     return;
   }
 
+  hasTelemetry.value = true;
   voltage.value = data.v || 0;
   current.value = data.c || 0;
   power.value = data.p || 0;

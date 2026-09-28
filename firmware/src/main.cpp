@@ -170,8 +170,8 @@ static bool shouldKeepWiFiSsidOnDisplay(unsigned long now) {
 
 static void printStartupMessage() {
     Serial.println(F("\nEduGrid MPPT trainer"));
-    Serial.println(F("Students edit firmware/src/mppt_alg.cpp"));
-    Serial.println(F("Gate PWM active; Duty 0-98%"));
+    Serial.println(F("P&O and IncCond built in"));
+    Serial.println(F("Gate PWM active; Duty 0-100%"));
     Serial.print(F("INA226 shunt [Ohm]: "));
     Serial.println(SHUNT_OHMS, 6);
 }
@@ -200,7 +200,7 @@ static void handleButtonInput(unsigned long now) {
         Serial.print(F("Algorithm changed to "));
         Serial.println(currentAlgorithm == ALGORITHM_INCCOND
             ? F("IncCond")
-            : currentAlgorithm == ALGORITHM_BERRY ? F("Berry") : F("Student/P&O"));
+            : currentAlgorithm == ALGORITHM_BERRY ? F("Berry") : F("P&O"));
         resetMPPT();
 #if defined(ESP32)
         if (currentAlgorithm == ALGORITHM_BERRY) resetBerryMppt();

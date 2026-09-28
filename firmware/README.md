@@ -136,7 +136,7 @@ Files: /downloads
 | Input | Action |
 | --- | --- |
 | Short button press | Toggle Auto / Manual mode |
-| Long button press | Switch Student/P&O and Incremental Conductance |
+| Long button press | Cycle Incremental Conductance and P&O; on Nano ESP32, also Student / Berry |
 | Slide potentiometer | Set duty cycle in Manual mode |
 | Web dashboard | Set mode, duty, algorithm, and start an I–V sweep |
 
@@ -193,7 +193,10 @@ downloads it. DELETE on the same file URL deletes it without authentication.
 
 ## Student Workspace
 
-Students should usually edit only:
+On the Nano ESP32, students write and install their algorithm in the dashboard's
+**Student / Berry** editor. The **P&O** selection always runs the built-in
+reference controller. The C++ workspace below remains for optional source-code
+exercises, but the standard firmware does not select it:
 
 ```text
 src/mppt_alg.cpp
@@ -254,6 +257,12 @@ Useful settings:
 | `ENABLE_SENSOR_IIR_FILTER` | Optional software sensor smoothing |
 | `OLED_CONTROLLER` | SSD1306 or SH1106 display driver |
 | `ENABLE_WIFI_DASHBOARD` | Nano ESP32 dashboard on/off |
+
+The active firmware and dashboard accept 0–100% duty. On the AVR board, 0%
+disconnects the timer output and drives the gate low; 100% holds the PWM output
+high. The ESP32 uses the pinned Arduino LEDC implementation. This range is
+not a substitute for checking gate polarity and component temperatures on the
+physical kit before prolonged endpoint operation.
 
 ## Serial Monitor
 

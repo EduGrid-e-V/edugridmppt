@@ -22,37 +22,38 @@
           @input="scheduleCompile"
         />
         <div class="button-row">
-          <button @click="run">{{ t(realHardware ? 'Install & Run' : 'Run') }}</button>
-          <button @click="pause">{{ t('Pause') }}</button>
-          <button v-if="!realHardware" @click="request('step')">{{ t('Single Step') }}</button>
-          <button @click="reset">{{ t('Reset') }}</button>
-          <button v-if="!realHardware" class="benchmark" :disabled="isBenchmarking" @click="benchmark">
+          <button :title="t(realHardware ? 'compiles this program on the ESP32, preserves the previous valid program if compilation fails, then enters Auto mode.' : 'Calls mppt() repeatedly until paused.')" @click="run">{{ t(realHardware ? 'Install & Run' : 'Run') }}</button>
+          <button :title="t(realHardware ? 'switches to Manual mode and stops Berry calls.' : 'Pauses repeated mppt() calls.')" @click="pause">{{ t('Pause') }}</button>
+          <button v-if="!realHardware" :title="t('calls mppt() once. Watch the live API values and duty.')" @click="request('step')">{{ t('Single Step') }}</button>
+          <button :title="t(realHardware ? 'recompiles the editor code and restarts Auto mode.' : 'clears Berry variables and restores the starting state.')" @click="reset">{{ t('Reset') }}</button>
+          <button v-if="!realHardware" class="benchmark" :title="t('runs the same program through a deterministic cloudy day and compares harvested energy.')" :disabled="isBenchmarking" @click="benchmark">
             {{ t(isBenchmarking ? 'Benchmarking…' : 'Benchmark') }}
           </button>
           <template v-else>
-            <label class="log-interval">{{ t('Every') }}
-              <select v-model.number="loggingInterval" :disabled="logStatus.recording || loggingBusy">
-                <option :value="1">{{ t('1 second') }}</option>
-                <option :value="30">{{ t('30 seconds') }}</option>
-                <option :value="60">{{ t('1 minute') }}</option>
-                <option :value="300">{{ t('5 minutes') }}</option>
-              </select>
-            </label>
-            <button class="benchmark" :disabled="loggingBusy" @click="toggleLogging">
-              {{ t(logStatus.recording ? 'Stop logging' : 'Start logging') }}
-            </button>
+            <div class="logging-actions">
+              <div v-if="!logStatus.recording" class="logging-select">
+                <select :value="''" :aria-label="t('Start logging')" :title="t('opens interval choices; selecting one starts a CSV recording.')" :disabled="loggingBusy" @change="startLogging">
+                  <option value="" disabled>{{ t('Start logging') }}</option>
+                  <option v-for="interval in loggingIntervals" :key="interval.seconds" :value="interval.seconds">
+                    {{ t('Every') }} {{ t(interval.label) }}
+                  </option>
+                </select>
+              </div>
+              <button v-else class="logging-primary" :title="t('Stops recording and closes the CSV file.')" :disabled="loggingBusy" @click="stopLogging">
+                {{ t('Stop logging') }}
+              </button>
+              <a class="download-button" href="/downloads" :title="t('opens the recordings page for CSV download.')">{{ t('Downloads') }}</a>
+            </div>
           </template>
         </div>
 
         <section v-if="realHardware" class="logging-panel" aria-labelledby="logging-title">
           <h3 id="logging-title">{{ t('Experiment logging') }}</h3>
           <p>{{ t('Record measured PV voltage/current, load voltage/current, and duty cycle to a CSV on the ESP32. A blank load value means its sensor was unavailable.') }}</p>
-          <p>{{ logStatus.message ? localizeMessage(logStatus.message) : t('Choose an interval, then start logging.') }}
+          <p>{{ logStatus.message ? localizeMessage(logStatus.message) : t('Choose an interval from Start logging to begin recording.') }}
             <span v-if="logStatus.recording"> {{ t('Recording:') }} {{ logStatus.active }}</span>
           </p>
-          <p>{{ ((logStatus.usedBytes || 0) / 1048576).toFixed(2) }} / 4.00 MiB {{ t('log budget used.') }}
-            <a href="/downloads">{{ t('Open recordings and download CSV files') }}</a>.
-          </p>
+          <p>{{ ((logStatus.usedBytes || 0) / 1048576).toFixed(2) }} / 4.00 MiB {{ t('log budget used.') }}</p>
           <p class="important">{{ t('A filesystem update can erase recordings. Download files you want to keep before updating.') }}</p>
         </section>
 
@@ -130,20 +131,6 @@
           <p class="console-hint"><code>duty.change()</code> {{ t('changes duty but prints nothing. Use') }} <code>print(PV.getPower())</code> {{ t('when you want console output.') }}</p>
         </section>
 
-        <details class="hints">
-          <summary>{{ t('Hints and controls') }}</summary>
-          <ol>
-            <li v-if="!realHardware"><strong>{{ t('Single Step') }}</strong> {{ t('calls mppt() once. Watch the live API values and duty.') }}</li>
-            <li v-else><strong>{{ t('Install & Run') }}</strong> {{ t('compiles this program on the ESP32, preserves the previous valid program if compilation fails, then enters Auto mode.') }}</li>
-            <li>{{ t('If power increased, try another small change in the same direction.') }}</li>
-            <li>{{ t('If power decreased, reverse the direction of the duty change.') }}</li>
-            <li><strong>{{ t('Run') }}</strong> {{ t('repeats those steps;') }} <strong>{{ t('Pause') }}</strong> {{ t('freezes them;') }} <strong>{{ t('Reset') }}</strong> {{ t('clears Berry variables and restores the starting state.') }}</li>
-            <li v-if="!realHardware"><strong>{{ t('Benchmark') }}</strong> {{ t('runs the same program through a deterministic cloudy day and compares harvested energy.') }}</li>
-            <li v-else><strong>{{ t('Start logging') }}</strong> {{ t('records the real kit at the selected interval. Stop it before downloading the CSV.') }}</li>
-          </ol>
-          <p><strong>{{ t('Uniform shadow is not partial shading.') }}</strong> {{ t('It reduces light over the whole panel and therefore has only one power maximum. Real partial shading can create multiple maxima because of cell strings and bypass diodes.') }}</p>
-        </details>
-
       </aside>
     </div>
   </section>
@@ -151,7 +138,7 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue';
-import { BENCHMARK_SCENARIOS, SIMPLE_SCENARIOS, sampleScenario } from '../simulation/SimpleSimulation.js';
+import { BENCHMARK_SCENARIOS, sampleScenario } from '../simulation/SimpleSimulation.js';
 import { locale, localizeMessage, t } from '../i18n.js';
 
 const emit = defineEmits(['command']);
@@ -201,7 +188,12 @@ watch(locale, (next, previous) => {
 const diagnostics = ref([]);
 const benchmarkRuns = ref([]);
 const isBenchmarking = ref(false);
-const loggingInterval = ref(1);
+const loggingIntervals = [
+  { seconds: 1, label: '1 second' },
+  { seconds: 30, label: '30 seconds' },
+  { seconds: 60, label: '1 minute' },
+  { seconds: 300, label: '5 minutes' }
+];
 const loggingBusy = ref(false);
 const logStatus = ref({ recording: false, message: '', usedBytes: 0, active: '' });
 const autoScroll = ref(true);
@@ -282,11 +274,10 @@ async function refreshLogging() {
   logStatus.value = await request('log-status');
 }
 
-async function toggleLogging() {
+async function updateLogging(command, params = {}) {
   loggingBusy.value = true;
   try {
-    logStatus.value = await request(logStatus.value.recording ? 'log-stop' : 'log-start',
-      { intervalS: loggingInterval.value });
+    logStatus.value = await request(command, params);
   } catch (error) {
     showError(error);
     await refreshLogging().catch(() => {});
@@ -295,12 +286,23 @@ async function toggleLogging() {
   }
 }
 
+function startLogging(event) {
+  const intervalS = Number(event.target.value);
+  event.target.value = '';
+  if (!loggingIntervals.some((interval) => interval.seconds === intervalS)) return;
+  return updateLogging('log-start', { intervalS });
+}
+
+function stopLogging() {
+  return updateLogging('log-stop');
+}
+
 function joulesToWh(joules) {
   return (joules / 3600).toFixed(3);
 }
 
 function scenarioLabel(id) {
-  return t(SIMPLE_SCENARIOS.find((scenario) => scenario.id === id)?.label ?? id);
+  return t(BENCHMARK_SCENARIOS.find((scenario) => scenario.id === id)?.label ?? id);
 }
 
 function showError(error) {
@@ -327,24 +329,29 @@ header h2, header p, h3, h4 { margin: 0; }
 textarea { width: 100%; min-height: 390px; resize: vertical; padding: 14px; border: 1px solid #9fafaa; border-radius: 6px; background: #17212b; color: #e8f1ed; font: 14px/1.55 ui-monospace, SFMono-Regular, Consolas, monospace; tab-size: 2; }
 .button-row { justify-content: flex-start; flex-wrap: wrap; }
 button { padding: 9px 13px; border: 1px solid #9fafaa; border-radius: 5px; background: #f8faf8; cursor: pointer; font-weight: 750; }
-button:hover { background: #e8f1ed; }
+button:hover:not(:disabled) { background: #e8f1ed; }
 button:disabled { cursor: wait; opacity: .7; }
-.benchmark { margin-left: auto; background: #2f7f66; color: #fff; }
-.log-interval { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
-.log-interval select { width: auto; padding: 7px; }
+.benchmark { margin-left: auto; }
+.logging-actions { display: flex; align-items: stretch; gap: 8px; margin-left: auto; flex-wrap: wrap; }
+.logging-select { position: relative; }
+.logging-select::after { content: '▾'; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #fff; pointer-events: none; }
+.benchmark, .logging-select select, .logging-primary { min-height: 40px; padding: 8px 12px; border: 1px solid #17212b; border-radius: 6px; background: #17212b; color: #fff; font-weight: 850; font-size: .95rem; }
+.logging-select select { appearance: none; min-width: 160px; padding-right: 32px; cursor: pointer; color-scheme: dark; }
+.logging-select select:disabled { cursor: wait; opacity: .7; }
+.benchmark:hover:not(:disabled), .logging-select select:hover:not(:disabled), .logging-primary:hover:not(:disabled) { background: #2f7f66; border-color: #2f7f66; }
+.download-button { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 8px 12px; border: 1px solid #17212b; border-radius: 6px; color: #17212b; text-decoration: none; font-weight: 850; }
+.download-button:hover { background: #e8f1ed; }
 .logging-panel p { margin: 8px 0 0; line-height: 1.45; }
 .lab-side > section, .benchmark-panel, .logging-panel { padding: 12px; border: 1px solid #dfe6e3; border-radius: 6px; background: #f8faf8; }
-.task-note, .hints { padding: 10px 12px; border: 1px solid #cbd8d3; border-radius: 6px; background: #f4faf7; line-height: 1.5; }
+.task-note { padding: 10px 12px; border: 1px solid #cbd8d3; border-radius: 6px; background: #f4faf7; line-height: 1.5; }
 .api-guide dl { display: grid; gap: 5px; margin: 10px 0; }
 .api-guide dl div { display: flex; justify-content: space-between; gap: 12px; }
 .api-guide dd { margin: 0; font-variant-numeric: tabular-nums; }
-.api-guide p, .console-hint, .fixed-load, .hints p { margin: 8px 0 0; line-height: 1.45; }
+.api-guide p, .console-hint, .fixed-load { margin: 8px 0 0; line-height: 1.45; }
 .important { color: #8b3027; }
 .console-hint { color: #586574; font-size: .82rem; }
 .console-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .console-header label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; font-size: .82rem; }
-.hints summary { cursor: pointer; font-weight: 850; }
-.hints ol { padding-left: 20px; line-height: 1.5; }
 code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
 .diagnostics p { padding: 7px; border-radius: 4px; background: #e4f4ec; }
 .diagnostics p.error { background: #fde8e5; color: #8b3027; }
@@ -356,8 +363,6 @@ code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
 .chart-grid { stroke: currentColor; stroke-width: .5; opacity: .25; }
 .scenario-line { fill: none; stroke-width: 3; vector-effect: non-scaling-stroke; }
 .scenario-1 { color: steelblue; stroke: steelblue; }
-.scenario-2 { color: darkorange; stroke: darkorange; }
-.scenario-3 { color: slateblue; stroke: slateblue; }
 .benchmark-profile-chart figcaption { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 20px; font-weight: 750; }
 .benchmark-profile-chart figcaption span::before { content: '— '; }
 .benchmark-output { margin-top: 12px; padding-top: 12px; border-top: 2px solid #cbd8d3; }

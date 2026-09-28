@@ -18,7 +18,7 @@ extern float LoadPower;
 extern bool LoadSensorAvailable;
 
 static bool _sweeping = false;
-static float _sweepDuty = 0.05f;
+static float _sweepDuty = PWM_MIN_DUTY;
 static unsigned long _lastSweepStep = 0;
 static Mode _preSweepMode;
 
@@ -39,7 +39,7 @@ void startSweep() {
     _preSweepMode = mode;
     mode = MODE_MANUAL; // Take control
     _sweeping = true;
-    _sweepDuty = 0.05f;
+    _sweepDuty = PWM_MIN_DUTY;
     _sweepData.clear();
     setDuty(_sweepDuty);
     _lastSweepStep = millis();
@@ -66,9 +66,8 @@ bool updateSweep() {
         p.loadSensor = LoadSensorAvailable;
         _sweepData.push_back(p);
         
-        // Increment duty
-        _sweepDuty += 0.02f;
-        if (_sweepDuty > 0.95f) {
+        // Include both 0% and 100% endpoints before finishing.
+        if (_sweepDuty >= PWM_MAX_DUTY) {
             // End sweep
             _sweeping = false;
             mode = _preSweepMode; // Restore mode
@@ -76,6 +75,8 @@ bool updateSweep() {
             _lastSweepStep = millis();
             return true;
         } else {
+            _sweepDuty += 0.02f;
+            if (_sweepDuty > PWM_MAX_DUTY) _sweepDuty = PWM_MAX_DUTY;
             setDuty(_sweepDuty);
         }
         _lastSweepStep = millis();

@@ -8,7 +8,8 @@
  * - display output is handled in display_manager.cpp
  * - WiFi and the dashboard are handled in wifi_manager.cpp
  *
- * Students should mainly edit mppt_alg.cpp.
+ * ESP32 students normally use the Berry editor; the C++ function in
+ * mppt_alg.cpp remains as an optional source-code exercise.
  */
 
 #pragma once
@@ -80,7 +81,7 @@ void runSelectedMpptAlgorithm(float panelVoltageVolts,
                               Algorithm selectedAlgorithm);
 
 /**
- * @brief The main student workspace.
+ * @brief Optional C++ student workspace (not selected by the standard UI).
  *
  * This function is intentionally simple: it receives voltage/current/power
  * measurements and changes the duty cycle.

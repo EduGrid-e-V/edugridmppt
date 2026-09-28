@@ -81,10 +81,8 @@ void runSelectedMpptAlgorithm(float panelVoltageVolts,
     } else if (selectedAlgorithm == ALGORITHM_BERRY) {
         if (!runBerryMpptStep()) setConverterDutyCycle(PWM_MIN_DUTY);
 #endif
-    } else if (USE_REFERENCE_PNO) {
-        runReferencePerturbObserve(measurement);
     } else {
-        runStudentMpptAlgorithm(measurement);
+        runReferencePerturbObserve(measurement);
     }
 }
 
@@ -144,7 +142,7 @@ float getConverterDutyCycle() {
 
 void mpptPerturbObserve(float panelVoltageVolts, float panelCurrentAmps) {
     currentMeasurement = makeSolarPanelMeasurement(panelVoltageVolts, panelCurrentAmps);
-    runStudentMpptAlgorithm(currentMeasurement);
+    runReferencePerturbObserve(currentMeasurement);
 }
 
 void mpptIncrementalConductance(float panelVoltageVolts, float panelCurrentAmps) {

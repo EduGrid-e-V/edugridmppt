@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { mount } from '@vue/test-utils';
 import VICurve from '../src/components/VICurve.vue';
 import RealtimeChart from '../src/components/RealtimeChart.vue';
+import ControlPanel from '../src/components/ControlPanel.vue';
 
 describe('I–V chart scale', () => {
   it('keeps the dynamic current axis at or above 200 mA without stretching the SVG', async () => {
@@ -61,5 +62,65 @@ describe('I–V chart scale', () => {
     await wrapper.setProps({ data: [[], []] });
     expect(getLabels().at(-1)).toBe('2.0');
     expect(wrapper.find('svg.chart-svg').attributes('preserveAspectRatio')).toBe('xMidYMid meet');
+  });
+  it('uses 50 mA and 250 mW defaults for the real I–V plot, then restores simulation scales', async () => {
+    const wrapper = mount(VICurve, {
+      props: { voltage: 13, current: 0.016, sweepData: [], realHardware: true }
+    });
+    const currentLabels = () => wrapper.findAll('.grid > g')
+      .filter((group) => group.find('line').attributes('y1') === group.find('line').attributes('y2'))
+      .map((group) => group.find('text').text());
+    const powerLabels = () => wrapper.findAll('.power-scale .tick-label').map((tick) => tick.text());
+
+    expect(currentLabels()).toEqual(['0', '0.01', '0.02', '0.03', '0.04', '0.05']);
+    expect(powerLabels()).toEqual(['0', '0.05', '0.10', '0.15', '0.20', '0.25']);
+
+    await wrapper.setProps({ realHardware: false });
+    expect(currentLabels()).toEqual(['0', '0.05', '0.10', '0.15', '0.20']);
+    expect(powerLabels()).toEqual(['0', '0.5', '1.0', '1.5', '2.0']);
+  });
+
+  it('uses a 250 mW real power-history scale with readable values and restores 2 W in simulation', async () => {
+    const wrapper = mount(RealtimeChart, {
+      props: { data: [[0, 1, 2], [0.2, 0.2, 0.2]], realHardware: true }
+    });
+    const labels = () => wrapper.findAll('.grid > g')
+      .filter((group) => group.find('line').attributes('y1') === group.find('line').attributes('y2'))
+      .map((group) => group.find('text').text());
+
+    expect(labels()).toEqual(['0', '0.05', '0.10', '0.15', '0.20', '0.25']);
+    expect(wrapper.find('.readout').text()).toBe('0.20 W');
+
+    await wrapper.setProps({ realHardware: false });
+    expect(labels()).toEqual(['0', '0.5', '1.0', '1.5', '2.0']);
+    await wrapper.setProps({ realHardware: true, data: [[0, 1, 2], [0.2, 0.31, 0.31]] });
+    expect(labels().at(-1)).toBe('0.35');
+  });
+
+});
+
+describe('Real telemetry display', () => {
+  it('shows missing readings as unavailable and displays them when telemetry arrives', async () => {
+    const wrapper = mount(ControlPanel, {
+      props: {
+        mode: 'MANUAL', algorithm: 'PNO', duty: 0.2,
+        power: 0.18, voltage: 13.41, current: 0.013,
+        loadPower: 0.15, loadVoltage: 2.7, loadCurrent: 0.05,
+        loadSensor: true, hasTelemetry: false
+      }
+    });
+    const panelValues = () => wrapper.findAll('.panel-measurements .reading-row dd span').map((value) => value.text());
+    expect(panelValues()).toEqual(['--', '--', '--']);
+    await wrapper.setProps({ hasTelemetry: true });
+    expect(panelValues()).toEqual(['0.18', '13.41', '0.01']);
+  });
+
+  it('does not draw a live I–V point before real telemetry arrives', async () => {
+    const wrapper = mount(VICurve, {
+      props: { voltage: 0, current: 0, sweepData: [], realHardware: true, hasTelemetry: false }
+    });
+    expect(wrapper.find('.live-point').exists()).toBe(false);
+    await wrapper.setProps({ voltage: 13.41, current: 0.013, hasTelemetry: true });
+    expect(wrapper.find('.live-point').exists()).toBe(true);
   });
 });
