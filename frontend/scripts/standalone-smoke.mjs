@@ -189,6 +189,21 @@ try {
   const fixedDutyScore = Number.parseFloat(await page.locator('.benchmark-output dd strong').first().textContent());
   if (!(fixedDutyScore < 90)) throw new Error(`Fixed 18% duty scored ${fixedDutyScore}%`);
   await page.waitForFunction((before) => document.querySelector('.power-panel .line-path')?.getAttribute('d') !== before, chartPathBeforeBenchmark);
+  await editor.fill('def mppt()\n  print("BENCHMARK_TICK")\n  duty.set(0.18)\nend');
+  await page.getByText('Berry program compiled successfully.').waitFor({ timeout: 10_000 });
+  await benchmarkButton.click();
+  await page.getByText('Benchmark print output suppressed (432000 lines).').waitFor({ timeout: 60_000 });
+  const printedDutyScore = Number.parseFloat(await page.locator('.benchmark-output dd strong').first().textContent());
+  if (Math.abs(printedDutyScore - fixedDutyScore) > 0.01) {
+    throw new Error(`Berry print changed benchmark score: ${fixedDutyScore}% versus ${printedDutyScore}%`);
+  }
+  const consoleTextAfterBenchmark = await page.locator('.console-output pre').textContent();
+  await page.getByRole('button', { name: 'Pause', exact: true }).click();
+  await page.getByRole('button', { name: 'Single Step', exact: true }).click();
+  await page.waitForFunction((before) => {
+    const next = document.querySelector('.console-output pre')?.textContent;
+    return next !== before && next?.includes('BENCHMARK_TICK');
+  }, consoleTextAfterBenchmark, { timeout: 10_000 });
 
   if (browserErrors.length) throw new Error(browserErrors.join('\n'));
   console.log('PASS file://, worker telemetry, Berry diagnostics, controls, reset, and benchmark');

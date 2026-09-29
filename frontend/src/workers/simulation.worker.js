@@ -9,12 +9,18 @@ const BENCHMARK_STEP_S = 0.1;
 let sweepData = [];
 let berryRuntime = null;
 let compiledCode = '';
+let suppressBenchmarkConsole = false;
+let suppressedBenchmarkLines = 0;
 
 const reply = (id, payload, error) => postMessage({ type: 'response', id, payload, error });
 
 async function loadBerryRuntime() {
   if (!berryRuntime) {
     berryRuntime = await createBerryRuntime((line) => {
+      if (suppressBenchmarkConsole) {
+        suppressedBenchmarkLines += 1;
+        return;
+      }
       postMessage({ type: 'event', payload: { event: 'student-console', line } });
     });
   }
@@ -41,31 +47,40 @@ async function benchmark(code) {
   const diagnostics = runtime.compile(code);
   if (diagnostics.some(({ severity }) => severity === 'error')) return { diagnostics, runs: [] };
   const runs = [];
-  for (const scenario of BENCHMARK_SCENARIOS) {
-    const benchmarkEngine = new SimpleSimulation({ noise: 0, tickMs: 100, algorithmPeriodMs: 100, onFrame: () => {} });
-    runtime.compile(code);
-    installStudent(runtime, benchmarkEngine);
-    benchmarkEngine.setMode('AUTO');
-    benchmarkEngine.setDuty(BENCHMARK_START_DUTY);
-    benchmarkEngine.loadScenario(scenario.id);
-    let energyJ = 0;
-    let availableEnergyJ = 0;
-    for (let index = 0; index < Math.ceil(scenario.durationS / BENCHMARK_STEP_S); index += 1) {
-      const frame = benchmarkEngine.tick();
-      energyJ += frame.p * BENCHMARK_STEP_S;
-      availableEnergyJ += benchmarkEngine.maximumPower() * BENCHMARK_STEP_S;
+  suppressBenchmarkConsole = true;
+  try {
+    for (const scenario of BENCHMARK_SCENARIOS) {
+      const benchmarkEngine = new SimpleSimulation({ noise: 0, tickMs: 100, algorithmPeriodMs: 100, onFrame: () => {} });
+      runtime.compile(code);
+      installStudent(runtime, benchmarkEngine);
+      benchmarkEngine.setMode('AUTO');
+      benchmarkEngine.setDuty(BENCHMARK_START_DUTY);
+      benchmarkEngine.loadScenario(scenario.id);
+      let energyJ = 0;
+      let availableEnergyJ = 0;
+      for (let index = 0; index < Math.ceil(scenario.durationS / BENCHMARK_STEP_S); index += 1) {
+        const frame = benchmarkEngine.tick();
+        energyJ += frame.p * BENCHMARK_STEP_S;
+        availableEnergyJ += benchmarkEngine.maximumPower() * BENCHMARK_STEP_S;
+      }
+      runs.push({
+        scenario: scenario.id,
+        energyJ,
+        availableEnergyJ,
+        capturePercent: availableEnergyJ > 0 ? 100 * energyJ / availableEnergyJ : 0,
+        simulatedDurationS: scenario.durationS
+      });
     }
-    runs.push({
-      scenario: scenario.id,
-      energyJ,
-      availableEnergyJ,
-      capturePercent: availableEnergyJ > 0 ? 100 * energyJ / availableEnergyJ : 0,
-      simulatedDurationS: scenario.durationS
-    });
+    runtime.compile(code);
+    installStudent(runtime);
+    return { diagnostics, runs };
+  } finally {
+    suppressBenchmarkConsole = false;
+    if (suppressedBenchmarkLines > 0) {
+      postMessage({ type: 'event', payload: { event: 'benchmark-output-suppressed', count: suppressedBenchmarkLines } });
+      suppressedBenchmarkLines = 0;
+    }
   }
-  runtime.compile(code);
-  installStudent(runtime);
-  return { diagnostics, runs };
 }
 
 self.onmessage = async ({ data }) => {

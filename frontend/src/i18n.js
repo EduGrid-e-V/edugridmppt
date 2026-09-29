@@ -103,6 +103,7 @@ const rows = [
   ['Irradiance from sunrise to sunset on a fluctuating benchmark day','Einstrahlung von Sonnenaufgang bis Sonnenuntergang an einem wechselhaften Benchmark-Tag','Irradiancia desde el amanecer hasta la puesta de sol en un día variable de evaluación'],
   ['Benchmark explanation','Die gewonnene Energie wird über den Tag aufsummiert und in Wattstunden (Wh; 1 Wh = 3600 J) angegeben. Der Tracking-Wert vergleicht sie mit der Energie eines idealen Reglers am maximalen Leistungspunkt. Ein fester Tastgrad verliert Energie, wenn sich der optimale Betriebspunkt verschiebt.','La energía obtenida se acumula durante el día y se muestra en vatios-hora (Wh; 1 Wh = 3600 J). La puntuación de seguimiento la compara con la energía de un regulador ideal en el punto de máxima potencia. Un ciclo de trabajo fijo pierde energía cuando cambia el punto óptimo.'],
   ['Benchmark results','Benchmark-Ergebnisse','Resultados de la evaluación'],
+  ['Benchmark print output suppressed ({count} lines).','Benchmark-Ausgabe unterdrückt ({count} Zeilen).','Salida de impresión de la evaluación omitida ({count} líneas).'],
   ['of available energy','der verfügbaren Energie','de la energía disponible'],
   ['Wh harvested /','Wh gewonnen /','Wh obtenidos /'],
   ['Wh available','Wh verfügbar','Wh disponibles'],

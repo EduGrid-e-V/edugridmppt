@@ -233,6 +233,11 @@ const handleData = (data) => {
     loadSweepData();
     return;
   }
+  if (__EDUGRID_STANDALONE__ && data.event === 'benchmark-output-suppressed') {
+    studentConsole.value = [...studentConsole.value.slice(-199),
+      t('Benchmark print output suppressed ({count} lines).', { count: data.count })];
+    return;
+  }
   if (__EDUGRID_STANDALONE__ && data.event === 'student-console') {
     studentConsole.value = [...studentConsole.value.slice(-199), String(data.line)];
     return;
