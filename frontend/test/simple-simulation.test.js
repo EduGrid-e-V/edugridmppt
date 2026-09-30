@@ -154,4 +154,13 @@ describe('SimpleSimulation', () => {
     expect(points.at(-1)).toMatchObject({ v: 13.5, i: 0 });
     expect(simulation.maximumPower()).toBeCloseTo(Math.max(...points.map(({ p }) => p)), 3);
   });
+
+  it('caps the cold simulated panel at 14 V open circuit', () => {
+    const simulation = new SimpleSimulation({ noise: 0 });
+    simulation.setSunPosition(0.5);
+    simulation.setCloudCover(0);
+    simulation.setAmbient(-10);
+    expect(simulation.panelState().voc).toBe(14);
+    expect(simulation.sweep().at(-1).v).toBe(14);
+  });
 });

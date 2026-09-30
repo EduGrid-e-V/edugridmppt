@@ -2,6 +2,7 @@ const DUTY_MIN = 0;
 const DUTY_MAX = 1;
 const CONVERTER_EFFICIENCY = 0.82;
 const PANEL_CURVE_SHAPE = 20;
+const MAX_SIMULATED_VOC_V = 14;
 const MPPT_DUTY_STEP = 0.01;
 
 const FLUCTUATING_DAY_SCENARIO = {
@@ -114,7 +115,7 @@ export class SimpleSimulation {
     const cellTemperatureC = this.ambientC + 31.25 * irradiance;
     const voltageTemperatureFactor = Math.max(0.7, 1 - 0.0032 * (this.ambientC - 25));
     return {
-      voc: 13.5 * voltageTemperatureFactor * (0.9 + 0.1 * Math.pow(irradiance, 0.2)),
+      voc: Math.min(MAX_SIMULATED_VOC_V, 13.5 * voltageTemperatureFactor * (0.9 + 0.1 * Math.pow(irradiance, 0.2))),
       isc: 0.18 * irradiance * (1 + 0.0005 * (this.ambientC - 25)),
       curveShape: PANEL_CURVE_SHAPE,
       irradianceWm2: irradiance * 1000,

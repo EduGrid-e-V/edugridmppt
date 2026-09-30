@@ -226,12 +226,12 @@ const formatLoadMeasurement = (measurementValue) => {
   min-height: 0;
   background: #ffffff;
   border-radius: 8px;
-  padding: 14px;
+  padding: 12px;
   box-shadow: 0 14px 34px rgba(25, 39, 52, 0.08);
   color: #17212b;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   border: 1px solid #d8dfdd;
 }
 
@@ -276,13 +276,13 @@ const formatLoadMeasurement = (measurementValue) => {
 
 .measurement-groups {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .measurement-card {
   display: grid;
-  gap: 8px;
-  padding: 10px 12px;
+  gap: 6px;
+  padding: 8px 12px;
   border-radius: 6px;
   background: #f8faf8;
   border: 1px solid #dfe6e3;
@@ -341,7 +341,7 @@ const formatLoadMeasurement = (measurementValue) => {
   grid-template-columns: minmax(72px, 1fr) auto;
   align-items: center;
   gap: 12px;
-  min-height: 32px;
+  min-height: 30px;
   padding: 5px 0;
   border-top: 1px solid #e5ece9;
   cursor: help;
@@ -424,7 +424,7 @@ const formatLoadMeasurement = (measurementValue) => {
   margin-top: auto;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .mode-selector {
@@ -458,7 +458,7 @@ const formatLoadMeasurement = (measurementValue) => {
 
 .manual-input,
 .auto-input {
-  padding: 12px;
+  padding: 10px;
   border: 1px solid #dfe6e3;
   border-radius: 8px;
   background: #f8faf8;
@@ -483,7 +483,7 @@ const formatLoadMeasurement = (measurementValue) => {
 }
 
 .field-row {
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 output {

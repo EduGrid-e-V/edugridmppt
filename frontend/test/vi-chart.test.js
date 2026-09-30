@@ -19,13 +19,15 @@ describe('I–V chart scale', () => {
     expect(Number(wrapper.find('.plot-bg').attributes('height'))).toBeGreaterThan(350);
   });
 
-  it('starts the voltage axis at 20 V and expands it in 5 V steps', async () => {
+  it('starts at 15 V in simulation, retains 20 V for real measurements, and expands in 5 V steps', async () => {
     const wrapper = mount(VICurve, {
       props: { voltage: 13.4, current: 0.016, sweepData: [] }
     });
     const labels = () => wrapper.findAll('.grid > g').filter((group) => group.find('line').attributes('x1') === group.find('line').attributes('x2')).map((group) => group.find('text').text());
+    expect(labels()).toEqual(['0', '5', '10', '15']);
+    await wrapper.setProps({ realHardware: true });
     expect(labels()).toEqual(['0', '5', '10', '15', '20']);
-    await wrapper.setProps({ voltage: 21 });
+    await wrapper.setProps({ realHardware: false, voltage: 21 });
     expect(labels()).toEqual(['0', '5', '10', '15', '20', '25']);
   });
 

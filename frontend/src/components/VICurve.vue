@@ -25,14 +25,14 @@
           </g>
           <g v-for="tick in yTicks" :key="`y-${tick.value}`">
             <line :x1="plot.x" :x2="plot.right" :y1="tick.y" :y2="tick.y" />
-            <text class="tick-label" :x="plot.x - 14" :y="tick.y + 4" text-anchor="end">
+            <text class="tick-label" :x="plot.x - 12" :y="tick.y + 4" text-anchor="end">
               {{ tick.label }}
             </text>
           </g>
         </g>
         <g class="power-scale">
           <g v-for="tick in powerTicks" :key="`p-${tick.value}`">
-            <text class="tick-label power-label" :x="plot.right + 16" :y="tick.y + 4" text-anchor="start">
+            <text class="tick-label power-label" :x="plot.right + 12" :y="tick.y + 4" text-anchor="start">
               {{ tick.label }}
             </text>
           </g>
@@ -96,18 +96,19 @@ const MIN_CURRENT_AXIS_A = 0.2;
 const REAL_MIN_CURRENT_AXIS_A = 0.05;
 const REAL_CURRENT_TICK_STEP_A = 0.01;
 const powerTickStepW = computed(() => props.realHardware ? REAL_POWER_TICK_STEP_W : POWER_TICK_STEP_W);
-const MIN_VOLTAGE_AXIS_V = 20;
+const MIN_VOLTAGE_AXIS_V = 15;
+const REAL_MIN_VOLTAGE_AXIS_V = 20;
 const VOLTAGE_TICK_STEP_V = 5;
 const hasSweep = computed(() => props.sweepData?.length >= 2);
 
 const frameElement = ref(null);
 const chartHeight = ref(450);
 const plot = reactive({
-  x: 78,
+  x: 70,
   y: 18,
-  width: 460,
+  width: 502,
   height: 367,
-  right: 538,
+  right: 572,
   bottom: 385
 });
 let frameObserver;
@@ -131,7 +132,7 @@ onUnmounted(() => frameObserver?.disconnect());
 const bounds = computed(() => {
   const minimumCurrentA = props.realHardware ? REAL_MIN_CURRENT_AXIS_A : MIN_CURRENT_AXIS_A;
   return {
-    x: Math.ceil(Math.max(MIN_VOLTAGE_AXIS_V, maxSeen.value.voltage) / VOLTAGE_TICK_STEP_V) * VOLTAGE_TICK_STEP_V,
+    x: Math.ceil(Math.max(props.realHardware ? REAL_MIN_VOLTAGE_AXIS_V : MIN_VOLTAGE_AXIS_V, maxSeen.value.voltage) / VOLTAGE_TICK_STEP_V) * VOLTAGE_TICK_STEP_V,
     y: props.realHardware
       ? Math.ceil(Math.max(minimumCurrentA, maxSeen.value.current * 1.16) / REAL_CURRENT_TICK_STEP_A) * REAL_CURRENT_TICK_STEP_A
       : niceMax(Math.max(minimumCurrentA, maxSeen.value.current * 1.16), minimumCurrentA),
