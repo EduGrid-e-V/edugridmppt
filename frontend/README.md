@@ -26,7 +26,7 @@ Key services:
   0% is the panel open-circuit state.
 - `src/services/MockConnector.js` is the small direct adapter used during local development; it delegates simulation to `SimpleSimulation`.
 - `src/workers/simulation.worker.js` owns the same model plus the real Berry 1.1.0 interpreter and benchmark in the standalone build.
-- `../packages/pv-sim` remains an independent, tested physics package, but is not used by this deliberately simple dashboard simulation.
+- The optional physics-model prototype is preserved on the `pv-sim` branch; neither dashboard build depends on it.
 - `src/services/EspConnector.js` connects to the ESP32 using `/ws`, `/api/set`, `/api/sweep`, and `/api/sweepdata`.
 - `src/components/SimulationScene.vue` only visualizes the sky and emits environmental inputs; it is not a physical model.
 

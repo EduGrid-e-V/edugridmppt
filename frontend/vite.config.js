@@ -1,6 +1,5 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import { fileURLToPath, URL } from 'node:url'
 import { existsSync, renameSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { viteSingleFile } from 'vite-plugin-singlefile'
@@ -21,11 +20,6 @@ export default defineConfig(() => {
   plugins: [vue(), ...(standalone ? [viteSingleFile(), standaloneFilename] : [])],
   define: {
     __EDUGRID_STANDALONE__: JSON.stringify(standalone),
-  },
-  resolve: {
-    alias: {
-      '@edugrid/pv-sim': fileURLToPath(new URL('../packages/pv-sim/src/index.js', import.meta.url)),
-    },
   },
   base: './',
   build: {
