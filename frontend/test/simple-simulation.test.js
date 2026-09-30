@@ -139,9 +139,9 @@ describe('SimpleSimulation', () => {
     for (let index = 0; index < 1200; index += 1) expect(first.tick()).toEqual(second.tick());
   });
 
-  it('holds the physical load setting at 50 ohms', () => {
+  it('holds the simulated load setting at 25 ohms', () => {
     const simulation = new SimpleSimulation();
-    expect(simulation.loadOhm).toBe(50);
+    expect(simulation.loadOhm).toBe(25);
     expect('setLoad' in simulation).toBe(false);
   });
 

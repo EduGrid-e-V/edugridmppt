@@ -97,7 +97,7 @@
         />
       </label>
 
-      <p class="fixed-load"><strong>{{ t('Load') }}:</strong> {{ t('fixed at 50 Ω, matching the real kit.') }}</p>
+      <p class="fixed-load"><strong>{{ t('Load') }}:</strong> {{ t('fixed at 25 Ω in this simulation.') }}</p>
     </div>
   </section>
 </template>

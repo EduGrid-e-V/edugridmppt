@@ -59,6 +59,26 @@
           </div>
         </dl>
       </section>
+      <section class="measurement-card duty-measurements" aria-labelledby="duty-measurements">
+        <div class="measurement-card-title">
+          <h3 id="duty-measurements">{{ t('Duty cycle') }}</h3>
+          <span>{{ t('PWM') }}</span>
+        </div>
+        <dl class="reading-list">
+          <div
+            class="reading-row duty"
+            :data-hint="dutyCycleDescription"
+            :aria-label="`${t('Current setting')}: ${dutyCycleDescription}`"
+            tabindex="0"
+          >
+            <dt>{{ t('Current setting') }}</dt>
+            <dd>
+              <span>{{ dutyReading }}</span>
+              <small>%</small>
+            </dd>
+          </div>
+        </dl>
+      </section>
     </div>
 
     <div class="controls-section">
@@ -185,6 +205,10 @@ const loadReadings = computed(() => [
 ]);
 
 const dutyCycleDescription = computed(() => t('Duty cycle is the fraction of each PWM period where the converter switch is on. Changing it changes the electrical load seen by the panel.'));
+const dutyReading = computed(() => {
+  if (!props.hasTelemetry || !Number.isFinite(props.duty)) return '--';
+  return (props.duty * 100).toFixed(0);
+});
 
 const formatMeasurement = (measurementValue) => {
   if (!props.hasTelemetry) return '--';
@@ -270,6 +294,10 @@ const formatLoadMeasurement = (measurementValue) => {
 
 .load-measurements {
   border-left: 4px solid #7a62b8;
+}
+
+.duty-measurements {
+  border-left: 4px solid #2f7f66;
 }
 
 .measurement-card-title {

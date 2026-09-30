@@ -89,7 +89,7 @@ export class SimpleSimulation {
     this.sunPosition = 0.55;
     this.cloudCover = 0.12;
     this.ambientC = 25;
-    this.loadOhm = 50;
+    this.loadOhm = 25;
     this.scenario = null;
     this.scenarioTimeS = 0;
     this.algorithmElapsedMs = 0;
@@ -155,15 +155,21 @@ export class SimpleSimulation {
         }
       }
     } else if (this.algorithm === 'PNO') {
-      if (this.previous && frame.p < this.previous.p) this.direction *= -1;
+      if (this.duty >= DUTY_MAX) this.direction = -1;
+      else if (this.duty <= DUTY_MIN) this.direction = 1;
+      else if (this.previous && frame.p < this.previous.p) this.direction *= -1;
       this.duty = clamp(this.duty + this.direction * MPPT_DUTY_STEP, DUTY_MIN, DUTY_MAX);
-    } else if (this.algorithm === 'INCCOND' && this.previous) {
-      const dV = frame.v - this.previous.v;
-      const dI = frame.i - this.previous.i;
-      if (Math.abs(dV) < 0.002) this.duty = clamp(this.duty + (dI < 0 ? 0.01 : dI > 0 ? -0.01 : 0), DUTY_MIN, DUTY_MAX);
-      else {
-        const distance = dI / dV + (frame.v > 0 ? frame.i / frame.v : 0);
-        this.duty = clamp(this.duty + (distance > 0 ? -0.01 : distance < 0 ? 0.01 : 0), DUTY_MIN, DUTY_MAX);
+    } else if (this.algorithm === 'INCCOND') {
+      if (!this.previous && this.duty >= DUTY_MAX) {
+        this.duty = DUTY_MAX - MPPT_DUTY_STEP;
+      } else if (this.previous) {
+        const dV = frame.v - this.previous.v;
+        const dI = frame.i - this.previous.i;
+        if (Math.abs(dV) < 0.002) this.duty = clamp(this.duty + (dI < 0 ? 0.01 : dI > 0 ? -0.01 : 0), DUTY_MIN, DUTY_MAX);
+        else {
+          const distance = dI / dV + (frame.v > 0 ? frame.i / frame.v : 0);
+          this.duty = clamp(this.duty + (distance > 0 ? -0.01 : distance < 0 ? 0.01 : 0), DUTY_MIN, DUTY_MAX);
+        }
       }
     }
     this.previous = frame;

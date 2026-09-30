@@ -97,7 +97,7 @@
       <aside class="lab-side">
         <section class="api-guide">
           <h3>{{ t('Firmware-compatible API') }}</h3>
-          <p v-if="!realHardware" class="fixed-load"><strong>{{ t('Load') }}:</strong> {{ t('fixed 50 Ω, matching the real kit.') }}</p>
+          <p v-if="!realHardware" class="fixed-load"><strong>{{ t('Load') }}:</strong> {{ t('fixed 25 Ω in this simulation.') }}</p>
           <dl>
             <div><dt><code>PV.getVoltage()</code></dt><dd>{{ voltage.toFixed(2) }} V</dd></div>
             <div><dt><code>PV.getCurrent()</code></dt><dd>{{ current.toFixed(3) }} A</dd></div>

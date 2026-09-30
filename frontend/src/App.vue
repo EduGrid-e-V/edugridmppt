@@ -328,7 +328,12 @@ const setMode = (newMode) => {
 
 const setAlgorithm = (newAlgo) => {
   algorithm.value = newAlgo;
-  sendCommand('set', { algo: newAlgo });
+  if (experimentSource.value === 'simulation') {
+    duty.value = 1;
+    sendCommand('set', { algo: newAlgo, duty: 1 });
+  } else {
+    sendCommand('set', { algo: newAlgo });
+  }
 };
 
 const setDuty = (newDuty) => {
@@ -342,6 +347,10 @@ const doSweep = async () => {
 
   sweepHasRun.value = true;
   sweepCurveData.value = [];
+  if (experimentSource.value === 'simulation') {
+    duty.value = 1;
+    await connector.sendCommand('set', { duty: 1 });
+  }
   await connector.sendCommand('sweep');
   scheduleSweepFallback();
 };
