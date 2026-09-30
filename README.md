@@ -41,6 +41,10 @@ This is not just a board and some code. It is a small learning environment: meas
 
 ## ESP32 web pages
 
+Precompiled downloads are available from [GitHub Releases](https://github.com/EduGrid-e-V/edugridmppt/releases). Each tagged release provides an Arduino Nano `.hex`, an ESP32 `firmware.bin`, a dashboard `littlefs.bin`, and a complete ZIP with checksums, bootloader and partition images, instructions, and the standalone simulation page. GitHub Actions builds the same package on every `main` push; version tags publish it as a Release. GitLab CI also packages tagged commits as pipeline artifacts.
+
+For an ESP32 already running the OTA-capable firmware, upload `firmware.bin` and `littlefs.bin` separately at `/admin`. The bootloader and partition images require USB flashing; do not upload them through the browser. Keep a USB recovery path available, especially for the first test release.
+
 When connected to the board's open `EduGrid_XX` WiFi network, open
 `http://192.168.4.1/` for the dashboard. In the real experiment view,
 select **Downloads** in the header to find recorded CSV files. The

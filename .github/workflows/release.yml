@@ -1,0 +1,102 @@
+name: Build firmware and release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Require release tags to be on main
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          git fetch origin main:refs/remotes/origin/main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Test and build dashboards
+        working-directory: frontend
+        run: |
+          npm ci
+          npm test
+          npm run build:firmware
+          npm run build:standalone
+          npm run verify:builds
+          npm run test:standalone
+
+      - name: Install PlatformIO
+        run: python -m pip install 'platformio==6.1.19'
+
+      - name: Build Arduino Nano and ESP32 firmware and filesystem
+        working-directory: firmware
+        run: |
+          pio run -e nanoatmega328new
+          pio run -e arduino_nano_esp32
+          pio run -e arduino_nano_esp32 -t buildfs
+
+      - name: Package binaries and checksums
+        env:
+          CI_COMMIT_TAG: ${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
+          CI_COMMIT_SHA: ${{ github.sha }}
+          CI_PIPELINE_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: ./ci/package-firmware.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ github.run_id }}
+          path: release/
+          if-no-files-found: error
+          retention-days: 30
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: package
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: firmware-${{ github.run_id }}
+          path: release/
+
+      - name: Publish GitHub Release with OTA images and complete package
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          tag="$GITHUB_REF_NAME"
+          package="release/edugrid-mppt-${tag}"
+          release_flags=(--generate-notes)
+          if [[ "$tag" == v0.1.0 ]]; then
+            release_flags=(--prerelease --notes "First test release. The ZIP contains the ESP32 application and LittleFS images, Arduino Nano HEX, standalone dashboard, USB recovery images, instructions, and checksums. For OTA, upload firmware.bin and littlefs.bin separately at /admin. This release has not been validated on every hardware revision; keep USB recovery available.")
+          elif [[ "$tag" == v0.* ]]; then
+            release_flags+=(--prerelease)
+          fi
+          gh release create "$tag" \
+            "${package}.zip" \
+            "$package/arduino-nano-esp32/firmware.bin" \
+            "$package/arduino-nano-esp32/littlefs.bin" \
+            "$package"/arduino-nano/*.hex \
+            "$package/edugrid-mppt-standalone.html" \
+            --verify-tag --title "EduGrid MPPT $tag" \
+            "${release_flags[@]}"

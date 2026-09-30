@@ -22,7 +22,7 @@ frontend/
 
 Key services:
 
-- `src/simulation/SimpleSimulation.js` is the single model used by both frontend simulation paths. It represents the classroom panel as 13.5 V open circuit, 180 mA short circuit, and approximately 2 W maximum power, with a fixed 50 ohm load. Manual duty and Berry output span 0–100%; simulated
+- `src/simulation/SimpleSimulation.js` is the single model used by both frontend simulation paths. It represents the classroom panel as nominally 13.5 V open circuit (capped at 14 V), 180 mA short circuit, and approximately 2 W maximum power, with a fixed 25 ohm load. Manual duty and Berry output span 0–100%; simulated
   0% is the panel open-circuit state.
 - `src/services/MockConnector.js` is the small direct adapter used during local development; it delegates simulation to `SimpleSimulation`.
 - `src/workers/simulation.worker.js` owns the same model plus the real Berry 1.1.0 interpreter and benchmark in the standalone build.
