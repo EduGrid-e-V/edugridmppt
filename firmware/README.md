@@ -120,7 +120,9 @@ The browser updater intentionally does not replace the bootloader or partition
 table. Changes to either still require a USB connection.
 
 The board creates an open WiFi access point whose final two hexadecimal
-characters identify the individual board. Its OLED shows the network and page
+characters come from the last octet of its factory MAC address. This usually
+distinguishes nearby boards, but a one-byte suffix is not guaranteed unique.
+Its OLED shows the network and page
 addresses for the first 15 seconds after power-up, for example:
 
 ```text

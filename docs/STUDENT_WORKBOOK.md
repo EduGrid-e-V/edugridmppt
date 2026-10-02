@@ -501,7 +501,7 @@ The reference implementation is in `firmware/src/mppt_alg.cpp` outside the stude
 
 1. Build and upload the correct ESP32 environment from [Appendix C](#appendix-c-build-and-upload).
 2. Upload the LittleFS filesystem image.
-3. After power-up, watch the OLED for the board's network name. It starts with `EduGrid_` and ends with two hexadecimal characters unique to that board, for example `EduGrid_A3`. The name remains on the OLED for the first 15 seconds.
+3. After power-up, watch the OLED for the board's network name. It starts with `EduGrid_` and ends with two hexadecimal characters from the final octet of its factory MAC address, for example `EduGrid_A3`. The name remains on the OLED for the first 15 seconds.
 4. Connect a phone or laptop to that exact WiFi network. In a classroom, check the suffix so you do not connect to another group's board.
 5. Open `http://192.168.4.1` if the captive portal does not open automatically.
 6. Observe live voltage, current, power, duty, mode, and active algorithm.
@@ -863,7 +863,7 @@ The display shows panel and optional load measurements, duty cycle, mode, and al
 
 ## B.7 `wifi_manager.cpp` and `sweep_manager.cpp`
 
-The WiFi name starts with `EduGrid_` and appends two hexadecimal characters from the chip ID, for example `EduGrid_A3`. The dashboard reads live values, changes settings, and starts an I–V sweep. A sweep temporarily takes manual control and returns recorded curve data.
+The WiFi name starts with `EduGrid_` and appends two hexadecimal characters from the final octet of the factory MAC address, for example `EduGrid_A3`. The dashboard reads live values, changes settings, and starts an I–V sweep. A sweep temporarily takes manual control and returns recorded curve data.
 
 ## B.8 `mppt_alg.cpp`: student workspace
 

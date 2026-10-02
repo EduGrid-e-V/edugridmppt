@@ -57,7 +57,9 @@ static void sendBerryJson(AsyncWebServerRequest *request, int status, bool succe
 }
 
 static void buildWiFiSsid() {
-    uint8_t chipIdSuffix = (uint8_t)(ESP.getEfuseMac() & 0xFF);
+    // Arduino stores the MAC octets little-endian in this uint64_t value.
+    // Byte 5 is the final octet of the printed base MAC address.
+    uint8_t chipIdSuffix = (uint8_t)((ESP.getEfuseMac() >> 40) & 0xFF);
     snprintf(wifiAccessPointSsid,
              sizeof(wifiAccessPointSsid),
              "%s%02X",
