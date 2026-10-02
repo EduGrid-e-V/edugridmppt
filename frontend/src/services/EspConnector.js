@@ -1,3 +1,5 @@
+import { t } from '../i18n.js';
+
 export default class EspConnector {
   constructor(onDataCallback) {
     this.onData = onDataCallback;
@@ -44,13 +46,24 @@ export default class EspConnector {
     if (command === 'compile-student') {
       const response = await fetch('/api/berry', {
         method: 'POST',
-        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+        // This legacy web server interprets text/plain containing '=' as form data.
+        headers: { 'Content-Type': 'application/octet-stream' },
         body: params.code ?? ''
       });
-      const result = await response.json();
+      let result;
+      try {
+        result = await response.json();
+      } catch {
+        throw new Error(t('ESP32 Berry endpoint returned an invalid response (HTTP {status}).', { status: response.status }));
+      }
+      const success = response.ok && result?.ok === true && result?.installed === true && result?.healthy === true;
       return {
         ...result,
-        diagnostics: [{ severity: result.ok ? 'success' : 'error', message: result.diagnostic }]
+        ok: success,
+        diagnostics: [{
+          severity: success ? 'success' : 'error',
+          message: result?.diagnostic || t('Berry installation failed (HTTP {status}).', { status: response.status })
+        }]
       };
     }
 

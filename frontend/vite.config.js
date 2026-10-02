@@ -1,11 +1,12 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import { existsSync, renameSync } from 'node:fs'
+import { existsSync, readFileSync, renameSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { viteSingleFile } from 'vite-plugin-singlefile'
 
 export default defineConfig(() => {
   const standalone = process.env.EDUGRID_BUILD === 'standalone'
+  const version = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version
   const standaloneFilename = {
     name: 'standalone-html-filename',
     closeBundle() {
@@ -20,6 +21,7 @@ export default defineConfig(() => {
   plugins: [vue(), ...(standalone ? [viteSingleFile(), standaloneFilename] : [])],
   define: {
     __EDUGRID_STANDALONE__: JSON.stringify(standalone),
+    __EDUGRID_VERSION__: JSON.stringify(`v${version}`),
   },
   base: './',
   build: {

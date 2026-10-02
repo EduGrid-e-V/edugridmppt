@@ -1,0 +1,2 @@
+# Vite embeds raw WASM bytes in this generated JavaScript worker.
+firmware/data/assets/preflight.worker-*.js -diff

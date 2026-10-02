@@ -6,6 +6,13 @@ import RealtimeChart from '../src/components/RealtimeChart.vue';
 import ControlPanel from '../src/components/ControlPanel.vue';
 
 describe('I–V chart scale', () => {
+  it('reads the right-hand power title in the same upward direction as the current title', () => {
+    const wrapper = mount(VICurve, {
+      props: { voltage: 13.4, current: 0.016, sweepData: [] }
+    });
+    expect(wrapper.get('.power-title').attributes('transform')).toContain('rotate(-90)');
+  });
+
   it('keeps the dynamic current axis at or above 200 mA without stretching the SVG', async () => {
     const wrapper = mount(VICurve, {
       props: { voltage: 13.4, current: 0.016, sweepData: [] }

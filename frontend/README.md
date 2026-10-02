@@ -7,6 +7,8 @@ This is the browser dashboard for the EduGrid MPPT trainer. The same Vue source 
 
 The built dashboard is intentionally self-contained. It should not rely on external CDNs because the ESP32 usually serves it from its own access point. The header language selector switches the dashboard, charts, Berry guidance, and logging UI between English, German, and Spanish immediately. The initial language follows the browser locale; student-edited Berry code is never translated or overwritten. The same built-in translations ship in both firmware and standalone builds, with no runtime network request.
 
+The small header badge shows the build version from `frontend/package.json`. The current `-dev` suffix marks an unreleased build; only a separate Git release tag publishes a release.
+
 ## Project Layout
 
 ```text
@@ -62,7 +64,7 @@ In this mode the dashboard automatically uses `MockConnector`, so controls, char
 
 ## Build For The ESP32
 
-Create the small ESP32 build:
+Create the ESP32 build:
 
 ```bash
 cd frontend
@@ -77,7 +79,7 @@ The Vite config writes the built files directly into:
 
 That directory is the LittleFS data folder served by the ESP32 firmware. The build uses relative asset paths, so the dashboard can be served from the device without a separate web server or internet connection.
 
-This target includes the small Berry source editor used to install programs on the ESP32. It excludes the browser Berry/WASM interpreter, simulation worker, and benchmark runtime: real-mode Berry is executed and bounded by the firmware. In the real Berry view, CSV logging replaces the benchmark; the files are stored on the ESP32. The real dashboard header has a Downloads button that opens /downloads directly.
+This target includes the Berry source editor and a lazy browser-worker compiler check. The check loads only when **Install & Run** is pressed; it catches common syntax errors before upload but does not replace compilation and runtime limits on the ESP32. The simulation worker and benchmark runtime remain outside the firmware target. The external preflight worker is about 368 kB on LittleFS and runs in the browser, not on the ESP32. The complete dashboard uses about 572 kB of LittleFS; all files other than the preflight loader and worker total about 203 kB. These are uncompressed file sizes, so a browser connected to the ESP32 access point may transfer the full worker file on first use. In the real Berry view, CSV logging replaces the benchmark; the files are stored on the ESP32. The real dashboard header has a Downloads button that opens /downloads directly.
 
 ## Build The Standalone Algorithm Lab
 

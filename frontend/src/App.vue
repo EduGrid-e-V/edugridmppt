@@ -3,7 +3,10 @@
     <header class="topbar">
       <div class="brand-lockup" :aria-label="t('EduGrid MPPT Dashboard')">
         <img class="brand-logo" :src="edugridLogo" :alt="t('EduGrid logo')" />
-        <div class="brand-subtitle">{{ t('MPPT Lab Dashboard') }}</div>
+        <div class="brand-subtitle">
+          {{ t('MPPT Lab Dashboard') }}
+          <span class="version-tag" :aria-label="`${t('Version')} ${dashboardVersion}`" :title="t('Version')">{{ dashboardVersion }}</span>
+        </div>
       </div>
 
       <div class="topbar-actions">
@@ -152,6 +155,7 @@ import { locale, setLocale, t } from './i18n.js';
 import edugridLogo from './assets/edugrid_logo.svg';
 import edugridIcon from './assets/edugrid_icon.svg';
 
+const dashboardVersion = __EDUGRID_VERSION__;
 const isConnected = ref(false);
 
 const voltage = ref(0);

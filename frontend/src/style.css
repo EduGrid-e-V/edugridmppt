@@ -76,11 +76,30 @@ button {
 }
 
 .brand-subtitle {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-top: 0;
   color: #65707f;
   font-size: 0.88rem;
   font-weight: 700;
   text-transform: uppercase;
+}
+
+.version-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border: 1px solid #d8dfdd;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #65707f;
+  font-size: 0.67rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-transform: none;
+  white-space: nowrap;
 }
 
 .topbar-actions {

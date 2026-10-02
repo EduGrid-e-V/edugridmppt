@@ -64,7 +64,7 @@
         <text class="axis-title y-title" :transform="`translate(18 ${(plot.y + plot.bottom) / 2}) rotate(-90)`" text-anchor="middle">
           {{ t('Current (A)') }}
         </text>
-        <text class="axis-title power-title" :transform="`translate(626 ${(plot.y + plot.bottom) / 2}) rotate(90)`" text-anchor="middle">
+        <text class="axis-title power-title" :transform="`translate(626 ${(plot.y + plot.bottom) / 2}) rotate(-90)`" text-anchor="middle">
           {{ t('Power (W)') }}
         </text>
       </svg>

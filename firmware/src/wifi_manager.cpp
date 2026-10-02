@@ -14,6 +14,8 @@
 #include <ArduinoJson.h>
 #include <LittleFS.h>
 #include <DNSServer.h>
+#include <stdlib.h>
+#include <string.h>
 
 // Measurements from main.cpp
 extern float PanelVoltage;
@@ -253,28 +255,54 @@ void setupWiFi() {
 
   server.on("/api/berry", HTTP_POST,
     [](AsyncWebServerRequest *request){
-      String *source = static_cast<String *>(request->_tempObject);
-      if (source == nullptr) {
+      if (request->contentType() != "application/octet-stream") {
+          sendBerryJson(request, 415, false, "Berry upload must use application/octet-stream");
+          return;
+      }
+      const size_t length = request->contentLength();
+      if (length == 0) {
           sendBerryJson(request, 400, false, "Request body is empty");
           return;
       }
+      if (length > BERRY_SOURCE_MAX_BYTES) {
+          sendBerryJson(request, 413, false, "Program exceeds the 4096-byte limit");
+          return;
+      }
+      char *source = static_cast<char *>(request->_tempObject);
+      if (source == nullptr) {
+          sendBerryJson(request, 503, false, "Berry upload buffer unavailable");
+          return;
+      }
+      bool complete = !request->getAttribute("berryBodyInvalid", false) &&
+                      request->getAttribute("berryBytesReceived", 0L) == static_cast<long>(length);
+      bool hasNul = complete && memchr(source, '\0', length) != nullptr;
       String diagnostic;
-      bool installed = installBerryProgram(source->c_str(), source->length(), diagnostic);
-      delete source;
+      bool installed = complete && !hasNul && installBerryProgram(source, length, diagnostic);
+      if (!complete) diagnostic = "Berry upload body is incomplete";
+      else if (hasNul) diagnostic = "Berry source contains a NUL byte";
+      free(source);
       request->_tempObject = nullptr;
-      sendBerryJson(request, installed ? 200 : 422, installed, diagnostic);
+      sendBerryJson(request, installed ? 200 : complete && !hasNul ? 422 : 400,
+                    installed, diagnostic);
     },
     nullptr,
     [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
       if (index == 0) {
-          if (total > BERRY_SOURCE_MAX_BYTES) return;
-          request->_tempObject = new String();
-          static_cast<String *>(request->_tempObject)->reserve(total);
+          if (request->contentType() != "application/octet-stream" ||
+              total == 0 || total > BERRY_SOURCE_MAX_BYTES) return;
+          // The web server frees _tempObject on disconnect, so it must use malloc.
+          request->_tempObject = malloc(total + 1);
       }
-      String *source = static_cast<String *>(request->_tempObject);
-      if (source != nullptr && source->length() + len <= BERRY_SOURCE_MAX_BYTES) {
-          source->concat(reinterpret_cast<const char *>(data), len);
+      char *source = static_cast<char *>(request->_tempObject);
+      if (source == nullptr) return;
+      if (index > total || len > total - index ||
+          index != static_cast<size_t>(request->getAttribute("berryBytesReceived", 0L))) {
+          request->setAttribute("berryBodyInvalid", true);
+          return;
       }
+      memcpy(source + index, data, len);
+      source[index + len] = '\0';
+      request->setAttribute("berryBytesReceived", static_cast<long>(index + len));
     });
 
   setupCaptivePortalRoutes();

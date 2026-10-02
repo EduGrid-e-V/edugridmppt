@@ -1,7 +1,7 @@
 {
   "name": "mppt-dashboard",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.1-dev",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,8 +10,9 @@
     "build:standalone": "EDUGRID_BUILD=standalone vite build",
     "test": "vitest run",
     "test:standalone": "node scripts/standalone-smoke.mjs",
+    "test:firmware-preflight": "node scripts/firmware-preflight-smoke.mjs",
     "verify:builds": "node scripts/verify-builds.mjs",
-    "check": "npm test && npm run build:firmware && npm run build:standalone && npm run verify:builds && npm run test:standalone",
+    "check": "npm test && npm run build:firmware && npm run build:standalone && npm run verify:builds && npm run test:standalone && npm run test:firmware-preflight",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -19,13 +19,14 @@
           :aria-label="t('Berry code editor')"
           v-model="code"
           spellcheck="false"
+          :readonly="installBusy"
           @input="scheduleCompile"
         />
         <div class="button-row">
-          <button :title="t(realHardware ? 'compiles this program on the ESP32, preserves the previous valid program if compilation fails, then enters Auto mode.' : 'Calls mppt() repeatedly until paused.')" @click="run">{{ t(realHardware ? 'Install & Run' : 'Run') }}</button>
-          <button :title="t(realHardware ? 'switches to Manual mode and stops Berry calls.' : 'Pauses repeated mppt() calls.')" @click="pause">{{ t('Pause') }}</button>
+          <button :title="t(realHardware ? 'compiles this program on the ESP32, preserves the previous valid program if compilation fails, then enters Auto mode.' : 'Calls mppt() repeatedly until paused.')" :disabled="installBusy" @click="run">{{ t(realHardware ? 'Install & Run' : 'Run') }}</button>
+          <button :title="t(realHardware ? 'switches to Manual mode and stops Berry calls.' : 'Pauses repeated mppt() calls.')" :disabled="installBusy" @click="pause">{{ t('Pause') }}</button>
           <button v-if="!realHardware" :title="t('calls mppt() once. Watch the live API values and duty.')" @click="request('step')">{{ t('Single Step') }}</button>
-          <button :title="t(realHardware ? 'recompiles the editor code and restarts Auto mode.' : 'clears Berry variables and restores the starting state.')" @click="reset">{{ t('Reset') }}</button>
+          <button :title="t(realHardware ? 'recompiles the editor code and restarts Auto mode.' : 'clears Berry variables and restores the starting state.')" :disabled="installBusy" @click="reset">{{ t('Reset') }}</button>
           <button v-if="!realHardware" class="benchmark" :title="t('runs the same program through a deterministic cloudy day and compares harvested energy.')" :disabled="isBenchmarking" @click="benchmark">
             {{ t(isBenchmarking ? 'Benchmarking…' : 'Benchmark') }}
           </button>
@@ -108,7 +109,7 @@
             <div><dt><code>duty.get()</code></dt><dd>{{ duty.toFixed(3) }}</dd></div>
           </dl>
           <p><code>duty.set(0.50)</code> {{ t('chooses a duty directly.') }} <code>duty.change(-0.01)</code> {{ t('changes it relative to the current value.') }}</p>
-          <p class="important"><strong>{{ t('Buck rule:') }}</strong> {{ t('increasing duty lowers panel voltage; decreasing duty raises panel voltage.') }}</p>
+          <p class="important"><strong>{{ t('Buck Converter:') }}</strong> {{ t('At the same irradiance, increasing duty usually draws more panel current and lowers panel voltage; decreasing duty does the opposite.') }}</p>
         </section>
 
         <section class="diagnostics" aria-live="polite">
@@ -140,6 +141,7 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { BENCHMARK_SCENARIOS, sampleScenario } from '../simulation/SimpleSimulation.js';
 import { locale, localizeMessage, t } from '../i18n.js';
+import { validateBerrySource } from './berry/sourceValidation.js';
 
 const emit = defineEmits(['command']);
 
@@ -170,13 +172,13 @@ const starterCode = (language) => {
   if (language === 'de') return INITIAL_CODE
     .replace('# This uses the same student API as firmware/src/mppt_alg.cpp.', '# Dieselbe Schüler-API wie in firmware/src/mppt_alg.cpp.')
     .replace('# mppt() is called every 100 ms. Complete the controller below.', '# mppt() wird alle 100 ms aufgerufen. Vervollständige den Regler.')
-    .replace('# TODO: use the measurements to decide whether duty should change.', '# TODO: Entscheide anhand der Messwerte, ob sich der Tastgrad ändern soll.')
+    .replace('# TODO: use the measurements to decide whether duty should change.', '# TODO: Entscheide anhand der Messwerte, ob sich der Duty cycle ändern soll.')
     .replace('# duty.change(0.01) changes it relative to the current value.', '# duty.change(0.01) ändert ihn relativ zum aktuellen Wert.')
     .replace('# duty.set(0.50) chooses a new value directly.', '# duty.set(0.50) setzt einen neuen Wert direkt.');
   if (language === 'es') return INITIAL_CODE
     .replace('# This uses the same student API as firmware/src/mppt_alg.cpp.', '# La misma API para estudiantes que en firmware/src/mppt_alg.cpp.')
     .replace('# mppt() is called every 100 ms. Complete the controller below.', '# mppt() se llama cada 100 ms. Completa el controlador.')
-    .replace('# TODO: use the measurements to decide whether duty should change.', '# TODO: usa las mediciones para decidir si debe cambiar el ciclo de trabajo.')
+    .replace('# TODO: use the measurements to decide whether duty should change.', '# TODO: usa las mediciones para decidir si debe cambiar el Duty cycle.')
     .replace('# duty.change(0.01) changes it relative to the current value.', '# duty.change(0.01) lo cambia respecto al valor actual.')
     .replace('# duty.set(0.50) chooses a new value directly.', '# duty.set(0.50) establece directamente un valor nuevo.');
   return INITIAL_CODE;
@@ -186,6 +188,7 @@ watch(locale, (next, previous) => {
   if (code.value === starterCode(previous)) code.value = starterCode(next);
 });
 const diagnostics = ref([]);
+const installBusy = ref(false);
 const benchmarkRuns = ref([]);
 const isBenchmarking = ref(false);
 const loggingIntervals = [
@@ -225,8 +228,40 @@ function request(command, params = {}) {
 }
 
 async function compile() {
-  const result = await request('compile-student', { code: code.value });
-  diagnostics.value = result?.diagnostics ?? [];
+  const source = code.value;
+  if (props.realHardware) {
+    const validationError = validateBerrySource(source);
+    if (validationError) {
+      diagnostics.value = [{ severity: 'error', message: validationError }];
+      return false;
+    }
+    // The standalone build already embeds Berry in its simulation worker.
+    // Only the ESP32 dashboard needs a second, browser-side pre-upload check.
+    if (!__EDUGRID_STANDALONE__) {
+      diagnostics.value = [{ severity: 'info', message: 'Checking Berry code locally…' }];
+      let localDiagnostics;
+      try {
+        const { preflightBerry } = await import('./berry/preflight.js');
+        localDiagnostics = await preflightBerry(source);
+      } catch (error) {
+        showError(error);
+        return false;
+      }
+      if (localDiagnostics.some(({ severity }) => severity === 'error')) {
+        diagnostics.value = localDiagnostics;
+        return false;
+      }
+      diagnostics.value = [{ severity: 'info', message: 'Local check passed; installing on the ESP32…' }];
+    }
+  }
+  const result = await request('compile-student', { code: source });
+  diagnostics.value = result?.diagnostics ?? [{ severity: 'error', message: 'No response from the Berry compiler.' }];
+  if (props.realHardware && (result?.ok !== true || result?.installed !== true || result?.healthy !== true)) {
+    if (!diagnostics.value.some(({ severity }) => severity === 'error')) {
+      diagnostics.value = [{ severity: 'error', message: result?.diagnostic || 'Berry installation was not confirmed.' }];
+    }
+    return false;
+  }
   return !diagnostics.value.some(({ severity }) => severity === 'error');
 }
 
@@ -240,20 +275,40 @@ function scheduleCompile() {
 }
 
 async function run() {
-  if (!(await compile())) return;
-  if (props.realHardware) await request('set', { algo: 'STUDENT', mode: 'AUTO' });
-  else await request('run');
+  if (installBusy.value) return;
+  installBusy.value = true;
+  try {
+    if (!(await compile())) return;
+    if (props.realHardware) await request('set', { algo: 'STUDENT', mode: 'AUTO' });
+    else await request('run');
+  } catch (error) {
+    showError(error);
+  } finally {
+    installBusy.value = false;
+  }
 }
 
 async function pause() {
-  if (props.realHardware) await request('set', { mode: 'MANUAL' });
-  else await request('pause');
+  try {
+    if (props.realHardware) await request('set', { mode: 'MANUAL' });
+    else await request('pause');
+  } catch (error) {
+    showError(error);
+  }
 }
 
 async function reset() {
-  if (!(await compile())) return;
-  if (props.realHardware) await request('set', { algo: 'STUDENT', mode: 'AUTO' });
-  else await request('reset');
+  if (installBusy.value) return;
+  installBusy.value = true;
+  try {
+    if (!(await compile())) return;
+    if (props.realHardware) await request('set', { algo: 'STUDENT', mode: 'AUTO' });
+    else await request('reset');
+  } catch (error) {
+    showError(error);
+  } finally {
+    installBusy.value = false;
+  }
 }
 
 async function benchmark() {

@@ -1,6 +1,9 @@
 import { chromium } from 'playwright-core';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
+
+const expectedVersion = `v${JSON.parse(readFileSync(resolve('package.json'), 'utf8')).version}`;
 
 const browser = await chromium.launch({
   executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome',
@@ -17,16 +20,18 @@ try {
     const value = document.querySelector('.reading-row.voltage dd span')?.textContent;
     return Number(value) > 0;
   }, null, { timeout: 10_000 });
-  const headerOk = await page.evaluate(() => {
+  const headerOk = await page.evaluate((versionLabel) => {
     const logo = document.querySelector('.brand-logo');
     const language = document.querySelector('.language-select');
     const source = document.querySelector('.source-switch');
     const favicon = document.querySelector('link[rel="icon"]');
+    const version = document.querySelector('.version-tag');
     return logo?.complete && logo.naturalWidth > 0 && logo.src.startsWith('data:') &&
       favicon?.href.startsWith('data:') && favicon.href !== logo.src &&
+      version?.textContent.trim() === versionLabel &&
       Boolean(language.compareDocumentPosition(source) & Node.DOCUMENT_POSITION_FOLLOWING);
-  });
-  if (!headerOk) throw new Error('Original logo or language/source switch order is incorrect');
+  }, expectedVersion);
+  if (!headerOk) throw new Error('Logo, version label, or language/source switch order is incorrect');
   const chartScale = await page.locator('.vi-panel .chart-svg').evaluate((svg) => {
     const matrix = svg.getScreenCTM();
     return matrix && Math.abs(matrix.a - matrix.d) < 0.01;

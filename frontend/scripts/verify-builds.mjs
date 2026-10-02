@@ -8,11 +8,23 @@ function filesBelow(directory) {
   });
 }
 
-const firmware = filesBelow(resolve('../firmware/data'))
+const firmwareFiles = filesBelow(resolve('../firmware/data'));
+const preflightLoaderFiles = firmwareFiles.filter((path) => /\/preflight-[^/]+\.js$/.test(path));
+const preflightWorkerFiles = firmwareFiles.filter((path) => /\/preflight\.worker-[^/]+\.js$/.test(path));
+if (preflightLoaderFiles.length !== 1 || preflightWorkerFiles.length !== 1) {
+  throw new Error('Firmware build must contain one lazy Berry preflight loader and one external worker');
+}
+const preflightLoader = readFileSync(preflightLoaderFiles[0], 'utf8');
+const preflightWorker = readFileSync(preflightWorkerFiles[0], 'utf8');
+if (!preflightWorker.includes('berry_compile')) throw new Error('Firmware preflight worker lacks the Berry compiler');
+if (!preflightLoader.includes('preflight.worker-')) throw new Error('Firmware preflight loader does not load the external worker');
+const eagerFirmware = firmwareFiles.filter((path) => ![...preflightLoaderFiles, ...preflightWorkerFiles].includes(path))
   .map((path) => readFileSync(path))
   .map((buffer) => buffer.toString('latin1'))
   .join('\n');
-for (const forbidden of ['berry_compile', 'student-console', 'data:application/wasm', 'Fractional open-circuit voltage', 'Fractional short-circuit current']) {
+if (eagerFirmware.includes('berry_compile')) throw new Error('Berry preflight leaked into the eager firmware dashboard');
+const firmware = `${eagerFirmware}\n${preflightLoader}\n${preflightWorker}`;
+for (const forbidden of ['student-console', 'Fractional open-circuit voltage', 'Fractional short-circuit current']) {
   if (firmware.includes(forbidden)) throw new Error(`Firmware build contains standalone marker: ${forbidden}`);
 }
 for (const required of ['Student / Berry Algorithm Lab', 'Install & Run', '/api/berry']) {
@@ -20,6 +32,8 @@ for (const required of ['Student / Berry Algorithm Lab', 'Install & Run', '/api/
 }
 
 const standalone = readFileSync(resolve('dist/edugrid-mppt.html'), 'utf8');
+// A second inline Berry worker adds roughly 425 kB; leave room for normal UI growth.
+if (Buffer.byteLength(standalone) > 850_000) throw new Error('Standalone build likely contains a duplicate Berry preflight worker');
 for (const required of ['berry_compile', 'Student / Berry Algorithm Lab', 'Berry 1.1.0']) {
   if (!standalone.includes(required)) throw new Error(`Standalone build is missing: ${required}`);
 }
@@ -29,4 +43,4 @@ for (const forbidden of ['Fractional open-circuit voltage', 'Fractional short-ci
 if (/<script[^>]+src=|<link[^>]+rel=["']stylesheet/.test(standalone)) {
   throw new Error('Standalone HTML contains an external script or stylesheet');
 }
-console.log('PASS browser-WASM isolation, ESP32 Berry UI, and standalone asset inlining');
+console.log('PASS lazy firmware Berry preflight, ESP32 Berry UI, and standalone asset inlining');
