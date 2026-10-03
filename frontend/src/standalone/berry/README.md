@@ -1,6 +1,6 @@
 # Berry browser runtime
 
-`berry-wasm.js` is the real Berry interpreter compiled to WebAssembly and wrapped as an ES module. The standalone simulation runs it in the simulation worker. The ESP32 dashboard loads it only when **Install & Run** is pressed, in a separate browser worker that checks code before upload. The ESP32 still compiles and validates the uploaded source independently; the browser check cannot guarantee runtime behaviour on hardware.
+`berry-wasm.js` is the real Berry interpreter compiled to WebAssembly and wrapped as an ES module. Both standalone and ESP-hosted simulation run it in the simulation worker. The ESP32 dashboard reuses that same browser worker for the real-mode **Install & Run** preflight check; there is only one Berry WASM copy in the LittleFS build. The ESP32 still compiles and validates uploaded source independently; the browser check cannot guarantee runtime behaviour on hardware.
 
 - Upstream: https://github.com/berry-lang/berry
 - Version: 1.1.0

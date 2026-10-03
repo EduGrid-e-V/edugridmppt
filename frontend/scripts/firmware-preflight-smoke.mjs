@@ -59,8 +59,10 @@ try {
   });
   const page = await browser.newPage();
   const preflightRequests = [];
+  const workerRequests = [];
   page.on('request', (request) => {
     if (request.url().includes('/assets/preflight')) preflightRequests.push(request.url());
+    if (request.url().includes('/assets/simulation.worker-')) workerRequests.push(request.url());
   });
   await page.goto(`http://127.0.0.1:${server.address().port}/`);
   if (await page.locator('.version-tag').textContent() !== expectedVersion) {
@@ -69,14 +71,14 @@ try {
   await page.getByRole('button', { name: 'Auto MPPT' }).click();
   await page.locator('#algorithm').selectOption('STUDENT');
   await page.locator('#berry-editor').waitFor();
-  if (preflightRequests.length) throw new Error('Berry preflight loaded before Install & Run');
+  if (preflightRequests.length || workerRequests.length) throw new Error('Berry worker loaded before Install & Run');
 
   const autoBeforeInstall = settings.filter((entry) => entry.algo === 'STUDENT' && entry.mode === 'AUTO').length;
   await page.locator('#berry-editor').fill('def mppt(');
   await page.getByRole('button', { name: 'Install & Run' }).click();
   await page.locator('.diagnostics .error').waitFor({ timeout: 15_000 });
-  if (!preflightRequests.some((url) => url.includes('/assets/preflight.worker-'))) {
-    throw new Error('Install & Run did not load the external Berry preflight worker');
+  if (!preflightRequests.length || !workerRequests.length) {
+    throw new Error('Install & Run did not load the shared Berry simulation worker');
   }
   if (uploads.length !== 0) throw new Error('Invalid Berry source was uploaded');
   if (settings.filter((entry) => entry.algo === 'STUDENT' && entry.mode === 'AUTO').length !== autoBeforeInstall) {
@@ -96,7 +98,22 @@ try {
   if (settings.filter((entry) => entry.algo === 'STUDENT' && entry.mode === 'AUTO').length !== autoBeforeInstall + 1) {
     throw new Error('Confirmed Berry installation did not enter Auto mode');
   }
-  console.log(`PASS firmware browser preflight, raw upload, and guarded Auto mode (${localInstallMs} ms on localhost)`);
+
+  await page.getByRole('button', { name: 'Sim', exact: true }).click();
+  await page.waitForFunction(() => Number(document.querySelector('.panel-measurements .reading-row.voltage dd span')?.textContent) > 0);
+  await page.getByRole('button', { name: 'Auto MPPT' }).click();
+  await page.locator('#algorithm').selectOption('STUDENT');
+  await page.getByRole('heading', { name: 'Student / Berry Algorithm Lab' }).waitFor();
+  await page.locator('#berry-editor').fill('def mppt()\n  print("SIM_BERRY_TICK")\n  duty.set(0.37)\nend');
+  await page.getByText('Berry program compiled successfully.').waitFor({ timeout: 15_000 });
+  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  await page.waitForFunction(() => Number(document.querySelector('.duty-measurements .reading-row.duty dd span')?.textContent) === 37);
+  await page.getByText('SIM_BERRY_TICK').first().waitFor();
+  if (!(Number(await page.locator('.panel-measurements .reading-row.voltage dd span').textContent()) > 0)) {
+    throw new Error('Berry print event reset simulated measurements');
+  }
+  if (uploads.length !== 1) throw new Error('Simulated Berry code was uploaded to the ESP32');
+  console.log(`PASS firmware real-mode preflight and ESP-hosted Berry simulation (${localInstallMs} ms local install)`);
 } finally {
   await browser?.close();
   await new Promise((resolveClose) => server.close(resolveClose));

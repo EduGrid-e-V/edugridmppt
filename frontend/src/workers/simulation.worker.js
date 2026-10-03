@@ -108,6 +108,10 @@ self.onmessage = async ({ data }) => {
       postMessage({ type: 'event', payload: { event: 'sweep_done' } });
     } else if (command === 'sweep-data') {
       payload = { points: sweepData.length ? sweepData : engine.sweep(), loadSensor: true };
+    } else if (command === 'check-student') {
+      // A fresh worker checks real-mode uploads without altering the simulation.
+      const runtime = await loadBerryRuntime();
+      payload = { diagnostics: runtime.compile(params.code) };
     } else if (command === 'compile-student') {
       const runtime = await loadBerryRuntime();
       const diagnostics = runtime.compile(params.code);

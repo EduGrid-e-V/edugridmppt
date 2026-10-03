@@ -40,11 +40,9 @@ The dashboard communicates with the board through:
     *   `loadV`, `loadI`, `loadP`, `loadSensor`
 *   Sweep data can now include load-side arrays as well.
 
-### Mock Mode
-*   `MockConnector.js` simulates:
-    *   PV panel behavior.
-    *   MPPT movement.
-    *   Load/output-side readings for development without hardware.
+### Simulation Mode
+*   `SimulationWorkerConnector.js` connects the ESP-hosted and standalone dashboards to one browser worker.
+*   The worker uses `SimpleSimulation` for panel and load readings and runs built-in or student Berry MPPT algorithms without hardware.
 
 ## Firmware Status
 

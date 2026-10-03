@@ -1,13 +1,16 @@
-import MockConnector from './MockConnector';
 import EspConnector from './EspConnector';
 
-export function createSensorConnection(onData, source = 'auto') {
-  if (__EDUGRID_STANDALONE__ && source !== 'real') {
-    return import('./SimulationWorkerConnector.js').then(({ default: Connector }) => new Connector(onData));
-  }
-  if (source === 'simulation' || (source === 'auto' && import.meta.env.DEV)) {
-    return Promise.resolve(new MockConnector(onData));
+export async function createSensorConnection(onData, source = 'auto') {
+  if (source === 'simulation' || (__EDUGRID_STANDALONE__ && source !== 'real') ||
+      (source === 'auto' && import.meta.env.DEV)) {
+    const [connectorModule, workerModule] = await Promise.all([
+      import('./SimulationWorkerConnector.js'),
+      __EDUGRID_STANDALONE__
+        ? import('../workers/simulation.worker.js?worker&inline')
+        : import('../workers/simulation.worker.js?worker')
+    ]);
+    return new connectorModule.default(onData, workerModule.default);
   }
 
-  return Promise.resolve(new EspConnector(onData));
+  return new EspConnector(onData);
 }

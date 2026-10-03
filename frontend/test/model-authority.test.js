@@ -6,9 +6,13 @@ import { SimpleSimulation } from '../src/simulation/SimpleSimulation.js';
 const source = (path) => readFileSync(resolve(path), 'utf8');
 
 describe('simple simulation integration', () => {
-  it('uses one simple model in both simulation connectors', () => {
-    expect(source('src/services/MockConnector.js')).toContain("import { SimpleSimulation } from '../simulation/SimpleSimulation.js'");
+  it('uses one simple model for both standalone and ESP-hosted simulation', () => {
+    const service = source('src/services/index.js');
+    expect(service).toContain("import('./SimulationWorkerConnector.js')");
+    expect(service).toContain("import('../workers/simulation.worker.js?worker&inline')");
+    expect(service).toContain("import('../workers/simulation.worker.js?worker')");
     expect(source('src/workers/simulation.worker.js')).toContain("import { SimpleSimulation, BENCHMARK_SCENARIOS } from '../simulation/SimpleSimulation.js'");
+    expect(source('src/standalone/berry/preflight.js')).toContain("import SimulationWorker from '../../workers/simulation.worker.js?worker'");
   });
 
   it('matches the real-kit ratings and produces an approximately 2 W peak', () => {

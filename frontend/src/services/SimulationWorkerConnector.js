@@ -1,8 +1,7 @@
-import SimulationWorker from '../workers/simulation.worker.js?worker&inline';
-
 export default class SimulationWorkerConnector {
-  constructor(onDataCallback) {
+  constructor(onDataCallback, WorkerClass) {
     this.onData = onDataCallback;
+    this.WorkerClass = WorkerClass;
     this.worker = null;
     this.requestId = 0;
     this.pending = new Map();
@@ -10,7 +9,7 @@ export default class SimulationWorkerConnector {
 
   connect() {
     if (this.worker) return;
-    this.worker = new SimulationWorker();
+    this.worker = new this.WorkerClass();
     this.worker.onmessage = ({ data }) => {
       if (data.type === 'telemetry' || data.type === 'event') {
         this.onData(data.payload);
