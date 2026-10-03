@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { basename, resolve } from 'node:path';
 
 function filesBelow(directory) {
   return readdirSync(directory).flatMap((name) => {
@@ -9,6 +9,12 @@ function filesBelow(directory) {
 }
 
 const firmwareFiles = filesBelow(resolve('../firmware/data'));
+for (const path of firmwareFiles) {
+  const filename = basename(path);
+  if (Buffer.byteLength(filename, 'utf8') > 31) {
+    throw new Error(`Firmware asset filename exceeds the conservative LittleFS limit (31 bytes): ${filename}`);
+  }
+}
 const preflightLoaderFiles = firmwareFiles.filter((path) => /\/preflight-[^/]+\.js$/.test(path));
 const simulationWorkerFiles = firmwareFiles.filter((path) => /\/simulation\.worker-[^/]+\.js$/.test(path));
 if (preflightLoaderFiles.length !== 1 || simulationWorkerFiles.length !== 2) {

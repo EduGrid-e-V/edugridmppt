@@ -29,12 +29,16 @@ export default defineConfig(() => {
     emptyOutDir: true,
     assetsInlineLimit: standalone ? 100000000 : 4096,
     cssCodeSplit: !standalone,
-    rollupOptions: standalone ? {
-      output: {
+    rollupOptions: {
+      output: standalone ? {
         inlineDynamicImports: true,
         entryFileNames: 'edugrid-mppt.js',
+      } : {
+        // Some ESP32 LittleFS image builders reject names over 32 bytes.
+        // A chunk such as SimulationWorkerConnector-[hash].js exceeds that.
+        chunkFileNames: ({ name }) => `assets/${name.slice(0, 18)}-[hash].js`,
       },
-    } : undefined,
+    },
   },
   }
 })
