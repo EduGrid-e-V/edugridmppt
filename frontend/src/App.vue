@@ -175,14 +175,11 @@ const showDeviceDownloads = computed(() => !__EDUGRID_STANDALONE__ && !import.me
 const studentConsole = ref([]);
 const berryHealthy = ref(null);
 const algorithmOptions = computed(() => {
-  const options = [
+  return [
     { id: 'PNO', label: t('Perturb & Observe') },
-    { id: 'INCCOND', label: t('Incremental Conductance') }
+    { id: 'INCCOND', label: t('Incremental Conductance') },
+    { id: 'STUDENT', label: t('Student / Berry') }
   ];
-  if (__EDUGRID_STANDALONE__ || experimentSource.value === 'real') {
-    options.push({ id: 'STUDENT', label: t('Student / Berry') });
-  }
-  return options;
 });
 const showAdvancedSimulation = ref(false);
 const simulationSunPosition = ref(0.55);
@@ -224,6 +221,7 @@ const resetDashboardData = () => {
   loadSensor.value = false;
   hasTelemetry.value = false;
   berryHealthy.value = null;
+  studentConsole.value = [];
   sweepCurveData.value = [];
   sweepHasRun.value = false;
   powerChartData.value = [[], []];
@@ -237,12 +235,12 @@ const handleData = (data) => {
     loadSweepData();
     return;
   }
-  if (__EDUGRID_STANDALONE__ && data.event === 'benchmark-output-suppressed') {
+  if (experimentSource.value === 'simulation' && data.event === 'benchmark-output-suppressed') {
     studentConsole.value = [...studentConsole.value.slice(-199),
       t('Benchmark print output suppressed ({count} lines).', { count: data.count })];
     return;
   }
-  if (__EDUGRID_STANDALONE__ && data.event === 'student-console') {
+  if (experimentSource.value === 'simulation' && data.event === 'student-console') {
     studentConsole.value = [...studentConsole.value.slice(-199), String(data.line)];
     return;
   }

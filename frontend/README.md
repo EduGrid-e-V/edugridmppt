@@ -26,8 +26,8 @@ Key services:
 
 - `src/simulation/SimpleSimulation.js` is the single model used by both frontend simulation paths. It represents the classroom panel as nominally 13.5 V open circuit (capped at 14 V), 180 mA short circuit, and approximately 2 W maximum power, with a fixed 25 ohm load. Manual duty and Berry output span 0–100%; simulated
   0% is the panel open-circuit state.
-- `src/services/MockConnector.js` is the small direct adapter used during local development; it delegates simulation to `SimpleSimulation`.
-- `src/workers/simulation.worker.js` owns the same model plus the real Berry 1.1.0 interpreter and benchmark in the standalone build.
+- `src/services/SimulationWorkerConnector.js` connects all simulation modes—including development and the ESP-hosted page—to the same worker.
+- `src/workers/simulation.worker.js` owns the model, real Berry 1.1.0 interpreter, and benchmark in both builds. The firmware build uses an external worker file; the standalone build inlines it for `file://` use.
 - The optional physics-model prototype is preserved on the `pv-sim` branch; neither dashboard build depends on it.
 - `src/services/EspConnector.js` connects to the ESP32 using `/ws`, `/api/set`, `/api/sweep`, and `/api/sweepdata`.
 - `src/components/SimulationScene.vue` only visualizes the sky and emits environmental inputs; it is not a physical model.
@@ -60,7 +60,7 @@ Open the URL printed by Vite, usually:
 http://localhost:5173
 ```
 
-In this mode the dashboard automatically uses `MockConnector`, so controls, charts, and sweeps work without an ESP32 connected.
+In this mode the dashboard automatically uses the simulation worker, so controls, charts, sweeps, and Berry code work without an ESP32 connected.
 
 ## Build For The ESP32
 
@@ -79,7 +79,7 @@ The Vite config writes the built files directly into:
 
 That directory is the LittleFS data folder served by the ESP32 firmware. The build uses relative asset paths, so the dashboard can be served from the device without a separate web server or internet connection.
 
-This target includes the Berry source editor and a lazy browser-worker compiler check. The check loads only when **Install & Run** is pressed; it catches common syntax errors before upload but does not replace compilation and runtime limits on the ESP32. The simulation worker and benchmark runtime remain outside the firmware target. The external preflight worker is about 368 kB on LittleFS and runs in the browser, not on the ESP32. The complete dashboard uses about 572 kB of LittleFS; all files other than the preflight loader and worker total about 203 kB. These are uncompressed file sizes, so a browser connected to the ESP32 access point may transfer the full worker file on first use. In the real Berry view, CSV logging replaces the benchmark; the files are stored on the ESP32. The real dashboard header has a Downloads button that opens /downloads directly.
+This target offers Student / Berry in both Real and Sim modes. Sim runs the same `SimpleSimulation` and Berry interpreter as the standalone page; Real sends the program to the ESP32 after a browser-side compile check. Both browser functions share one external worker, loaded only when Sim is selected or **Install & Run** is pressed. The ESP32 still compiles uploaded source and enforces runtime limits independently. The worker is about 375 kB on LittleFS and runs in the browser, not on the ESP32; the complete dashboard uses about 576 kB of LittleFS. These are uncompressed file sizes, so a browser connected to the ESP32 access point may transfer the full worker file on first use. In the real Berry view, CSV logging replaces the benchmark; the files are stored on the ESP32. The real dashboard header has a Downloads button that opens /downloads directly.
 
 ## Build The Standalone Algorithm Lab
 
@@ -92,7 +92,7 @@ The generated file is `frontend/dist/edugrid-mppt.html`. It contains its scripts
 
 `frontend/dist/edugrid-mppt.html` is generated output. Never edit it manually.
 
-The simulated sweep is intentionally broader than a hardware sweep: it samples the complete model curve from 0 V/short circuit through 13.5 V/open circuit. Live operation still uses the fixed 50 ohm classroom load. The synthetic cloudy-day benchmark varies the whole panel's irradiance; it does not simulate cell-level partial shading or multiple power peaks.
+The simulated sweep is intentionally broader than a hardware sweep: it samples the complete model curve from 0 V/short circuit through 13.5 V/open circuit. Live operation uses the model's fixed 25 ohm load. The synthetic cloudy-day benchmark varies the whole panel's irradiance; it does not simulate cell-level partial shading or multiple power peaks.
 
 ## Upload To The Device
 

@@ -10,24 +10,25 @@ function filesBelow(directory) {
 
 const firmwareFiles = filesBelow(resolve('../firmware/data'));
 const preflightLoaderFiles = firmwareFiles.filter((path) => /\/preflight-[^/]+\.js$/.test(path));
-const preflightWorkerFiles = firmwareFiles.filter((path) => /\/preflight\.worker-[^/]+\.js$/.test(path));
-if (preflightLoaderFiles.length !== 1 || preflightWorkerFiles.length !== 1) {
-  throw new Error('Firmware build must contain one lazy Berry preflight loader and one external worker');
+const simulationWorkerFiles = firmwareFiles.filter((path) => /\/simulation\.worker-[^/]+\.js$/.test(path));
+if (preflightLoaderFiles.length !== 1 || simulationWorkerFiles.length !== 2) {
+  throw new Error('Firmware build must contain one Berry preflight loader and one shared simulation worker');
 }
 const preflightLoader = readFileSync(preflightLoaderFiles[0], 'utf8');
-const preflightWorker = readFileSync(preflightWorkerFiles[0], 'utf8');
-if (!preflightWorker.includes('berry_compile')) throw new Error('Firmware preflight worker lacks the Berry compiler');
-if (!preflightLoader.includes('preflight.worker-')) throw new Error('Firmware preflight loader does not load the external worker');
-const eagerFirmware = firmwareFiles.filter((path) => ![...preflightLoaderFiles, ...preflightWorkerFiles].includes(path))
+const simulationWorkerParts = simulationWorkerFiles.map((path) => readFileSync(path, 'utf8'));
+const berryWorkers = simulationWorkerParts.filter((part) => part.includes('berry_compile'));
+if (berryWorkers.length !== 1) throw new Error('Firmware build duplicated or omitted the Berry runtime');
+if (!preflightLoader.includes('simulation.worker-')) throw new Error('Firmware preflight does not reuse the simulation worker');
+const eagerFirmware = firmwareFiles.filter((path) => ![...preflightLoaderFiles, ...simulationWorkerFiles].includes(path))
   .map((path) => readFileSync(path))
   .map((buffer) => buffer.toString('latin1'))
   .join('\n');
 if (eagerFirmware.includes('berry_compile')) throw new Error('Berry preflight leaked into the eager firmware dashboard');
-const firmware = `${eagerFirmware}\n${preflightLoader}\n${preflightWorker}`;
-for (const forbidden of ['student-console', 'Fractional open-circuit voltage', 'Fractional short-circuit current']) {
+const firmware = `${eagerFirmware}\n${preflightLoader}\n${simulationWorkerParts.join('\n')}`;
+for (const forbidden of ['Fractional open-circuit voltage', 'Fractional short-circuit current']) {
   if (firmware.includes(forbidden)) throw new Error(`Firmware build contains standalone marker: ${forbidden}`);
 }
-for (const required of ['Student / Berry Algorithm Lab', 'Install & Run', '/api/berry']) {
+for (const required of ['Student / Berry Algorithm Lab', 'Install & Run', '/api/berry', 'check-student', 'benchmark']) {
   if (!firmware.includes(required)) throw new Error(`Firmware dashboard is missing ESP32 Berry UI: ${required}`);
 }
 
@@ -43,4 +44,4 @@ for (const forbidden of ['Fractional open-circuit voltage', 'Fractional short-ci
 if (/<script[^>]+src=|<link[^>]+rel=["']stylesheet/.test(standalone)) {
   throw new Error('Standalone HTML contains an external script or stylesheet');
 }
-console.log('PASS lazy firmware Berry preflight, ESP32 Berry UI, and standalone asset inlining');
+console.log('PASS one shared firmware Berry worker for simulation and preflight, ESP32 Berry UI, and standalone asset inlining');

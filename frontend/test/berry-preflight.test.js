@@ -6,14 +6,17 @@ describe('Berry browser-worker preflight', () => {
     const worker = { postMessage: vi.fn(), terminate: vi.fn() };
     await expect(preflightBerry('def mppt() end', 1, () => worker))
       .rejects.toThrow('Local Berry check timed out; nothing was installed.');
-    expect(worker.postMessage).toHaveBeenCalledWith({ code: 'def mppt() end' });
+    expect(worker.postMessage).toHaveBeenCalledWith({ id: 1, command: 'check-student', params: { code: 'def mppt() end' } });
     expect(worker.terminate).toHaveBeenCalledOnce();
   });
 
   it('terminates the worker and returns compile diagnostics', async () => {
     const worker = {
       postMessage: vi.fn(function () {
-        queueMicrotask(() => this.onmessage({ data: { diagnostics: [{ severity: 'error', message: 'syntax error' }] } }));
+        queueMicrotask(() => {
+          this.onmessage({ data: { type: 'telemetry', payload: { v: 1 } } });
+          this.onmessage({ data: { type: 'response', id: 1, payload: { diagnostics: [{ severity: 'error', message: 'syntax error' }] } } });
+        });
       }),
       terminate: vi.fn(),
     };
